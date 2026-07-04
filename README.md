@@ -14,7 +14,7 @@
 
 ## Status
 
-**Early development** (`v0.0.0`). The scan engine, MIME, and metadata scanners are available; more built-in scanners are coming next. Public API may change until `v1.0.0`.
+**Early development** (`v0.0.0`). The scan engine, MIME, metadata, and CSV scanners are available; more built-in scanners are coming next. Public API may change until `v1.0.0`.
 
 ---
 
@@ -26,7 +26,7 @@ See [Installation](#installation) to clone and build. Then:
 import { FileSecurityEngine } from "filebouncer";
 
 const engine = new FileSecurityEngine({
-  scanners: ["mime", "metadata"],
+  scanners: ["mime", "metadata", "csv"],
   maxFileSize: 50 * 1024 * 1024,
 });
 
@@ -265,7 +265,8 @@ pnpm test
 - [x] Scan engine (`FileSecurityEngine`)
 - [x] MIME scanner
 - [x] Metadata scanner
-- [ ] Built-in scanners (CSV, archive, polyglot)
+- [x] CSV injection scanner
+- [ ] Built-in scanners (archive, polyglot)
 - [ ] Express & Fastify middleware
 - [ ] v1.0.0 on npm
 

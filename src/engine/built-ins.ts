@@ -1,3 +1,4 @@
+import { CsvScanner } from "../scanners/csv";
 import { MetadataScanner } from "../scanners/metadata";
 import { MimeScanner } from "../scanners/mime";
 import type { EngineConfig, Scanner } from "../types";
@@ -14,6 +15,10 @@ export const resolveBuiltInScanners = (config: EngineConfig): Scanner[] => {
 
   if (selected === "all" || selected.includes("metadata")) {
     scanners.push(new MetadataScanner(config.metadata));
+  }
+
+  if (selected === "all" || selected.includes("csv")) {
+    scanners.push(new CsvScanner(config.csv));
   }
 
   return scanners;
