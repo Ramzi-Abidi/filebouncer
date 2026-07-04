@@ -3,6 +3,7 @@ export type {
   BuiltInScannerName,
   CsvConfig,
   EngineConfig,
+  MetadataConfig,
   MimeConfig,
   ScanError,
   ScanOptions,
@@ -27,4 +28,4 @@ export { detectType } from "./util/detect-type";
 
 export { FileSecurityEngine, scanBuffer } from "./engine";
 
-export { MimeScanner } from "./scanners";
+export { MetadataScanner, MimeScanner } from "./scanners";

@@ -7,22 +7,14 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-types%20included-blue)](src/index.ts)
 [![CI](https://github.com/Ramzi-Abidi/file-detection-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Ramzi-Abidi/file-detection-engine/actions/workflows/ci.yml)
 
-> **filebouncer is not an antivirus.** It does not scan for viruses, malware signatures, or trojans.  
-> It catches **file abuse**, attacks that exploit how your app handles uploads.
+> **filebouncer is not antivirus.**  
+> it catches **file abuse**, attacks that exploit how your app handles uploads.
 
 ---
 
 ## Status
 
-**Early development** (`v0.0.0`). The scan engine and MIME scanner are available; more built-in scanners are coming next. Public API may change until `v1.0.0`.
-
-| Shipped today                                          | Coming soon                                |
-| ------------------------------------------------------ | ------------------------------------------ |
-| `FileSecurityEngine.scan()`                            | Built-in scanners (metadata, CSV, archive) |
-| MIME scanner (`scanners: ["mime"]`)                    | Express / Fastify middleware               |
-| Custom `Scanner` support                               |                                            |
-| Input normalization (`Buffer`, streams, paths, `Blob`) |                                            |
-| Typed `ScanResult` / `Threat` model                    |                                            |
+**Early development** (`v0.0.0`). The scan engine, MIME, and metadata scanners are available; more built-in scanners are coming next. Public API may change until `v1.0.0`.
 
 ---
 
@@ -34,7 +26,7 @@ See [Installation](#installation) to clone and build. Then:
 import { FileSecurityEngine } from "filebouncer";
 
 const engine = new FileSecurityEngine({
-  scanners: ["mime"],
+  scanners: ["mime", "metadata"],
   maxFileSize: 50 * 1024 * 1024,
 });
 
@@ -272,7 +264,8 @@ pnpm test
 - [x] File signature detection (`detectType`)
 - [x] Scan engine (`FileSecurityEngine`)
 - [x] MIME scanner
-- [ ] Built-in scanners (metadata, CSV, archive, polyglot)
+- [x] Metadata scanner
+- [ ] Built-in scanners (CSV, archive, polyglot)
 - [ ] Express & Fastify middleware
 - [ ] v1.0.0 on npm
 
