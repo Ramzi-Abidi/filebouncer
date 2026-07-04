@@ -28,4 +28,4 @@ export { detectType } from "./util/detect-type";
 
 export { FileSecurityEngine, scanBuffer } from "./engine";
 
-export { MetadataScanner, MimeScanner } from "./scanners";
+export { CsvScanner, MetadataScanner, MimeScanner } from "./scanners";
