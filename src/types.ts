@@ -170,6 +170,13 @@ export interface MimeConfig {
   strict?: boolean;
 }
 
+export interface MetadataConfig {
+  /** Lowercased extensions (without dot) that always become threats. Merged with built-in defaults. */
+  denyExtensions?: string[];
+  /** Permit multiple dotted extensions such as `.tar.gz`. Defaults to `false`. */
+  allowDoubleExtension?: boolean;
+}
+
 export interface EngineConfig {
   /** Built-in scanners to enable. `"all"` enables every shipped scanner. */
   scanners?: BuiltInScannerName[] | "all";
@@ -189,6 +196,7 @@ export interface EngineConfig {
   archive?: ArchiveConfig;
   csv?: CsvConfig;
   mime?: MimeConfig;
+  metadata?: MetadataConfig;
 }
 
 /**
