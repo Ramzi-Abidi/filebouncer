@@ -3,7 +3,11 @@ import { fromBufferPromise } from "yauzl";
 import type { ArchiveConfig, Scanner, ScannerContext, Severity, Threat } from "../types";
 
 const ARCHIVE_EXTENSIONS = ["zip", "jar", "apk"];
-const ARCHIVE_MIMES = ["application/zip", "application/x-zip-compressed", "application/java-archive"];
+const ARCHIVE_MIMES = [
+  "application/zip",
+  "application/x-zip-compressed",
+  "application/java-archive",
+];
 
 const DEFAULT_MAX_ENTRIES = 10_000;
 const DEFAULT_MAX_TOTAL_UNCOMPRESSED = 100 * 1024 * 1024;
@@ -57,7 +61,12 @@ export class ArchiveScanner implements Scanner {
       zipfile = await fromBufferPromise(buffer, { lazyEntries: true, decodeStrings: false });
     } catch {
       threats.push(
-        this.makeThreat("CORRUPT_ARCHIVE", "medium", "Archive could not be parsed as a valid ZIP", undefined),
+        this.makeThreat(
+          "CORRUPT_ARCHIVE",
+          "medium",
+          "Archive could not be parsed as a valid ZIP",
+          undefined,
+        ),
       );
       return threats;
     }
@@ -78,12 +87,7 @@ export class ArchiveScanner implements Scanner {
           totalUncompressed += entry.uncompressedSize;
           totalCompressed += entry.compressedSize;
 
-          this.checkEntryRatio(
-            entry.compressedSize,
-            entry.uncompressedSize,
-            fileName,
-            threats,
-          );
+          this.checkEntryRatio(entry.compressedSize, entry.uncompressedSize, fileName, threats);
         }
 
         if (entryCount > this.options.maxEntries) {
@@ -261,7 +265,7 @@ export class ArchiveScanner implements Scanner {
   }
 
   private static isSymlink(versionMadeBy: number, externalFileAttributes: number): boolean {
-    if ((versionMadeBy >> 8) !== UNIX_VERSION_MADE_BY) return false;
+    if (versionMadeBy >> 8 !== UNIX_VERSION_MADE_BY) return false;
     const mode = externalFileAttributes >>> 16;
     return (mode & S_IFMT) === S_IFLNK;
   }
