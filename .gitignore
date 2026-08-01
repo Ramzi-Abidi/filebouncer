@@ -11,3 +11,4 @@ coverage
 !.env.example
 .tsbuildinfo
 .pnpm-store
+*.tgz
