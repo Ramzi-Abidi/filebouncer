@@ -7,8 +7,8 @@ Thank you for considering contributing to filebouncer! We appreciate your time a
 1. Fork the repository and clone it locally.
 
    ```bash
-   git clone https://github.com/Ramzi-Abidi/file-detection-engine.git
-   cd file-detection-engine
+   git clone https://github.com/Ramzi-Abidi/fileBouncer.git
+   cd fileBouncer
    ```
 
 2. Create a new branch for your feature or bug fix.

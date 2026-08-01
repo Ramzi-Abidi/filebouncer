@@ -5,7 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](package.json)
 [![TypeScript](https://img.shields.io/badge/TypeScript-types%20included-blue)](src/index.ts)
-[![CI](https://github.com/Ramzi-Abidi/file-detection-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Ramzi-Abidi/file-detection-engine/actions/workflows/ci.yml)
+[![CI](https://github.com/Ramzi-Abidi/fileBouncer/actions/workflows/ci.yml/badge.svg)](https://github.com/Ramzi-Abidi/fileBouncer/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/filebouncer.svg)](https://www.npmjs.com/package/filebouncer)
 
 > **filebouncer is not antivirus.**  
 > it catches **file abuse**, attacks that exploit how your app handles uploads.
@@ -14,13 +15,13 @@
 
 ## Status
 
-**Early development** (`v0.0.0`). The scan engine plus MIME, metadata, CSV, and archive scanners are available. Public API may change until `v1.0.0`.
+**v0.1.0** (first public release). The scan engine plus MIME, metadata, CSV, and archive scanners are available. Public API may still change until `v1.0.0`.
 
 ---
 
 ## Quick start
 
-See [Installation](#installation) to clone and build. Then:
+Install, then:
 
 ```ts
 import { FileSecurityEngine } from "filebouncer";
@@ -220,25 +221,21 @@ No ClamAV. No Docker sidecar. No native bindings.
 
 ## Installation
 
-Not published to npm yet. Clone and build from GitHub:
-
-```bash
-git clone https://github.com/Ramzi-Abidi/file-detection-engine.git
-cd file-detection-engine
-pnpm install
-pnpm build
-```
-
-Use as a local dependency in another project:
-
-```bash
-pnpm add file:../file-detection-engine
-```
-
-When the first npm release ships, install with:
-
 ```bash
 pnpm add filebouncer
+# or
+npm install filebouncer
+```
+
+Requires **Node.js ≥ 20** and an ESM project (`"type": "module"` or dynamic `import()`).
+
+To develop from source:
+
+```bash
+git clone https://github.com/Ramzi-Abidi/fileBouncer.git
+cd fileBouncer
+pnpm install
+pnpm build
 ```
 
 ---
@@ -246,14 +243,16 @@ pnpm add filebouncer
 ## Development
 
 ```bash
-git clone https://github.com/Ramzi-Abidi/file-detection-engine.git
-cd file-detection-engine
+git clone https://github.com/Ramzi-Abidi/fileBouncer.git
+cd fileBouncer
 pnpm install
 pnpm build
 pnpm typecheck
 pnpm lint
 pnpm test
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for PR guidelines.
 
 ---
 
@@ -267,9 +266,10 @@ pnpm test
 - [x] Metadata scanner
 - [x] CSV injection scanner
 - [x] Archive scanner (ZIP slip, bombs, unsafe entries)
+- [x] First npm release (`0.1.0`)
 - [ ] Polyglot scanner
 - [ ] Express & Fastify middleware
-- [ ] v1.0.0 on npm
+- [ ] v1.0.0 (stable API)
 
 ---
 
