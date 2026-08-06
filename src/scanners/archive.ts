@@ -93,7 +93,7 @@ export class ArchiveScanner implements Scanner {
         if (entryCount > this.options.maxEntries) {
           threats.push(
             this.makeThreat(
-              "ZIP_BOMB_ENTRIES",
+              "ARCHIVE_ENTRY_LIMIT",
               "critical",
               `Archive has more than ${String(this.options.maxEntries)} entries`,
               undefined,
@@ -106,7 +106,7 @@ export class ArchiveScanner implements Scanner {
         if (totalUncompressed > this.options.maxTotalUncompressed) {
           threats.push(
             this.makeThreat(
-              "ZIP_BOMB_SIZE",
+              "ARCHIVE_SIZE_LIMIT",
               "critical",
               `Archive uncompressed size exceeds ${String(this.options.maxTotalUncompressed)} bytes`,
               undefined,
@@ -126,7 +126,7 @@ export class ArchiveScanner implements Scanner {
       ) {
         threats.push(
           this.makeThreat(
-            "ZIP_BOMB_RATIO",
+            "ARCHIVE_RATIO_LIMIT",
             "critical",
             `Archive compression ratio exceeds ${String(this.options.maxRatio)}:1`,
             undefined,
@@ -159,7 +159,7 @@ export class ArchiveScanner implements Scanner {
     if (fileName.includes("\0")) {
       threats.push(
         this.makeThreat(
-          "ZIP_SLIP",
+          "UNSAFE_ENTRY_PATH",
           "critical",
           "Archive entry name contains a null byte",
           fileName,
@@ -171,9 +171,9 @@ export class ArchiveScanner implements Scanner {
     if (fileName.startsWith("/") || /^[A-Za-z]:[/\\]/.test(fileName)) {
       threats.push(
         this.makeThreat(
-          "ABSOLUTE_PATH",
+          "UNSAFE_ABS_PATH",
           "high",
-          `Archive entry has an absolute path: ${fileName}`,
+          `Archive entry uses an absolute path: ${fileName}`,
           fileName,
         ),
       );
@@ -183,9 +183,9 @@ export class ArchiveScanner implements Scanner {
     if (segments.some((segment) => segment === "..")) {
       threats.push(
         this.makeThreat(
-          "ZIP_SLIP",
+          "UNSAFE_ENTRY_PATH",
           "critical",
-          `Archive entry path escapes the destination directory: ${fileName}`,
+          `Archive entry path leaves the destination directory: ${fileName}`,
           fileName,
         ),
       );
@@ -203,9 +203,9 @@ export class ArchiveScanner implements Scanner {
 
     threats.push(
       this.makeThreat(
-        "SYMLINK_ENTRY",
+        "LINK_ENTRY",
         "high",
-        `Archive contains a symlink entry: ${fileName}`,
+        `Archive contains a link entry: ${fileName}`,
         fileName,
       ),
     );
@@ -222,7 +222,7 @@ export class ArchiveScanner implements Scanner {
 
     threats.push(
       this.makeThreat(
-        "ZIP_BOMB_RATIO",
+        "ARCHIVE_RATIO_LIMIT",
         "critical",
         `Archive entry compression ratio exceeds ${String(this.options.maxRatio)}:1`,
         fileName,

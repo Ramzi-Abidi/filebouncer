@@ -47,9 +47,9 @@ export class CsvScanner implements Scanner {
 
         threats.push({
           scanner: this.name,
-          code: "CSV_FORMULA_INJECTION",
+          code: "CSV_UNSAFE_CELL",
           severity: "high",
-          message: `Cell at row ${String(rowIndex + 1)}, column ${String(columnIndex + 1)} starts with a formula-injection prefix`,
+          message: `Cell at row ${String(rowIndex + 1)}, column ${String(columnIndex + 1)} starts with a disallowed prefix`,
           meta: {
             row: rowIndex + 1,
             column: columnIndex + 1,

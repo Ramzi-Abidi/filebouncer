@@ -98,7 +98,7 @@ describe("archive scanner", () => {
     const result = await engine.scan(zip, { filename: "evil.zip" });
 
     expect(result.threats).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: "ZIP_SLIP", scanner: "archive" })]),
+      expect.arrayContaining([expect.objectContaining({ code: "UNSAFE_ENTRY_PATH", scanner: "archive" })]),
     );
   });
 
@@ -109,7 +109,7 @@ describe("archive scanner", () => {
 
     expect(result.threats).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "ABSOLUTE_PATH", scanner: "archive" }),
+        expect.objectContaining({ code: "UNSAFE_ABS_PATH", scanner: "archive" }),
       ]),
     );
   });
@@ -129,7 +129,7 @@ describe("archive scanner", () => {
 
     expect(result.threats).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "ZIP_BOMB_ENTRIES", scanner: "archive" }),
+        expect.objectContaining({ code: "ARCHIVE_ENTRY_LIMIT", scanner: "archive" }),
       ]),
     );
   });
@@ -144,7 +144,7 @@ describe("archive scanner", () => {
 
     expect(result.threats).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "ZIP_BOMB_SIZE", scanner: "archive" }),
+        expect.objectContaining({ code: "ARCHIVE_SIZE_LIMIT", scanner: "archive" }),
       ]),
     );
   });
@@ -161,7 +161,7 @@ describe("archive scanner", () => {
 
     expect(result.threats).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "ZIP_BOMB_RATIO", scanner: "archive" }),
+        expect.objectContaining({ code: "ARCHIVE_RATIO_LIMIT", scanner: "archive" }),
       ]),
     );
   });
@@ -175,7 +175,7 @@ describe("archive scanner", () => {
 
     expect(result.threats).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "SYMLINK_ENTRY", scanner: "archive" }),
+        expect.objectContaining({ code: "LINK_ENTRY", scanner: "archive" }),
       ]),
     );
   });
@@ -190,7 +190,7 @@ describe("archive scanner", () => {
     ]);
     const result = await engine.scan(zip, { filename: "link.zip" });
 
-    expect(result.threats.find((t) => t.code === "SYMLINK_ENTRY")).toBeUndefined();
+    expect(result.threats.find((t) => t.code === "LINK_ENTRY")).toBeUndefined();
   });
 
   it("flags corrupt archives", async () => {
