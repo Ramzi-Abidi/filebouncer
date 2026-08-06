@@ -22,7 +22,7 @@ export type Verdict = "clean" | "suspicious" | "malicious";
 export interface Threat {
   /** Name of the scanner that produced the finding (e.g. `"archive"`). */
   scanner: string;
-  /** Stable machine-readable identifier (e.g. `"ZIP_SLIP"`). */
+  /** Stable machine-readable identifier (e.g. `"UNSAFE_ENTRY_PATH"`). */
   code: string;
   severity: Severity;
   /** Human-readable description of the finding. */
@@ -153,7 +153,7 @@ export interface ArchiveConfig {
 }
 
 export interface CsvConfig {
-  /** Cell prefixes that trigger formula-injection findings. */
+  /** Cell prefixes that trigger unsafe-cell findings. */
   prefixes?: string[];
   /** Stop scanning after N rows (0 = unlimited). */
   maxRows?: number;

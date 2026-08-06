@@ -1,7 +1,7 @@
 {
-  "name": "filebouncer",
-  "version": "0.1.0",
-  "description": "Lightweight file upload security layer for Node.js. Detects ZIP slip, ZIP bombs, MIME spoofing, CSV injection, and other structural file abuse.",
+  "name": "@filebouncer/core",
+  "version": "0.3.0",
+  "description": "Lightweight Node.js library for structural validation of uploaded files.",
   "license": "MIT",
   "packageManager": "pnpm@11.1.0",
   "type": "module",
@@ -17,7 +17,8 @@
     }
   },
   "files": [
-    "dist",
+    "dist/index.js",
+    "dist/index.d.ts",
     "README.md",
     "LICENSE"
   ],
@@ -32,18 +33,15 @@
     "format:check": "prettier --check ."
   },
   "keywords": [
-    "security",
     "file-upload",
-    "zip-slip",
-    "zip-bomb",
+    "validation",
     "mime",
-    "csv-injection",
     "scanner",
-    "validation"
+    "nodejs"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Ramzi-Abidi/fileBouncer.git"
+    "url": "git+https://github.com/Ramzi-Abidi/fileBouncer.git"
   },
   "bugs": {
     "url": "https://github.com/Ramzi-Abidi/fileBouncer/issues"

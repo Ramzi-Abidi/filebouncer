@@ -24,7 +24,7 @@ describe("csv scanner", () => {
 
     expect(result.threats).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "CSV_FORMULA_INJECTION", scanner: "csv" }),
+        expect.objectContaining({ code: "CSV_UNSAFE_CELL", scanner: "csv" }),
       ]),
     );
   });
@@ -37,7 +37,7 @@ describe("csv scanner", () => {
 
     expect(result.threats).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "CSV_FORMULA_INJECTION", scanner: "csv" }),
+        expect.objectContaining({ code: "CSV_UNSAFE_CELL", scanner: "csv" }),
       ]),
     );
   });
@@ -48,7 +48,7 @@ describe("csv scanner", () => {
 
     expect(result.threats).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "CSV_FORMULA_INJECTION", scanner: "csv" }),
+        expect.objectContaining({ code: "CSV_UNSAFE_CELL", scanner: "csv" }),
       ]),
     );
   });
@@ -59,7 +59,7 @@ describe("csv scanner", () => {
 
     expect(result.threats).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "CSV_FORMULA_INJECTION", scanner: "csv" }),
+        expect.objectContaining({ code: "CSV_UNSAFE_CELL", scanner: "csv" }),
       ]),
     );
   });
@@ -87,7 +87,7 @@ describe("csv scanner", () => {
 
     expect(result.threats).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "CSV_FORMULA_INJECTION", scanner: "csv" }),
+        expect.objectContaining({ code: "CSV_UNSAFE_CELL", scanner: "csv" }),
       ]),
     );
   });
@@ -116,7 +116,7 @@ describe("csv scanner", () => {
     expect(result.scannersRun).toContain("csv");
     expect(result.threats).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "CSV_FORMULA_INJECTION", scanner: "csv" }),
+        expect.objectContaining({ code: "CSV_UNSAFE_CELL", scanner: "csv" }),
       ]),
     );
   });
