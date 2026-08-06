@@ -98,7 +98,9 @@ describe("archive scanner", () => {
     const result = await engine.scan(zip, { filename: "evil.zip" });
 
     expect(result.threats).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: "UNSAFE_ENTRY_PATH", scanner: "archive" })]),
+      expect.arrayContaining([
+        expect.objectContaining({ code: "UNSAFE_ENTRY_PATH", scanner: "archive" }),
+      ]),
     );
   });
 
@@ -174,9 +176,7 @@ describe("archive scanner", () => {
     const result = await engine.scan(zip, { filename: "link.zip" });
 
     expect(result.threats).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: "LINK_ENTRY", scanner: "archive" }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ code: "LINK_ENTRY", scanner: "archive" })]),
     );
   });
 

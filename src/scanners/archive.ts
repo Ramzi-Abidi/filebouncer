@@ -202,12 +202,7 @@ export class ArchiveScanner implements Scanner {
     if (!ArchiveScanner.isSymlink(versionMadeBy, externalFileAttributes)) return;
 
     threats.push(
-      this.makeThreat(
-        "LINK_ENTRY",
-        "high",
-        `Archive contains a link entry: ${fileName}`,
-        fileName,
-      ),
+      this.makeThreat("LINK_ENTRY", "high", `Archive contains a link entry: ${fileName}`, fileName),
     );
   }
 

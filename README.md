@@ -73,12 +73,12 @@ Detections are **returned as data**, not thrown — your middleware decides whet
 
 ## Why filebouncer
 
-| Approach                     | Problem                                                              |
-| ---------------------------- | -------------------------------------------------------------------- |
-| Extension / MIME header only | Easy to spoof                                                        |
-| Hand-rolled archive checks   | Easy to miss edge cases                                              |
-| Antivirus alone              | Great for malware, not for structural upload issues                  |
-| Heavy security platforms     | Often overkill for a Node upload endpoint                            |
+| Approach                     | Problem                                             |
+| ---------------------------- | --------------------------------------------------- |
+| Extension / MIME header only | Easy to spoof                                       |
+| Hand-rolled archive checks   | Easy to miss edge cases                             |
+| Antivirus alone              | Great for malware, not for structural upload issues |
+| Heavy security platforms     | Often overkill for a Node upload endpoint           |
 
 filebouncer fills the gap: **lightweight, typed, Node-native structural checks** you drop into Express, Fastify, or any pipeline.
 
@@ -86,14 +86,14 @@ filebouncer fills the gap: **lightweight, typed, Node-native structural checks**
 
 ## What it checks
 
-| Area                       | Description                                              |
-| -------------------------- | -------------------------------------------------------- |
-| **Unsafe archive paths**   | Entry names that leave the extract directory             |
-| **Archive size limits**    | Too many entries, huge uncompressed size, extreme ratios |
-| **MIME mismatches**        | Extension or declared MIME disagrees with file signature |
-| **Risky spreadsheet cells**| Cells that start with characters office apps may treat specially |
-| **Unsafe archive entries** | Absolute paths, link entries, suspicious names           |
-| **Metadata anomalies**     | Double extensions, executable extensions on “documents”  |
+| Area                        | Description                                                      |
+| --------------------------- | ---------------------------------------------------------------- |
+| **Unsafe archive paths**    | Entry names that leave the extract directory                     |
+| **Archive size limits**     | Too many entries, huge uncompressed size, extreme ratios         |
+| **MIME mismatches**         | Extension or declared MIME disagrees with file signature         |
+| **Risky spreadsheet cells** | Cells that start with characters office apps may treat specially |
+| **Unsafe archive entries**  | Absolute paths, link entries, suspicious names                   |
+| **Metadata anomalies**      | Double extensions, executable extensions on “documents”          |
 
 ### What it does **not** detect
 
