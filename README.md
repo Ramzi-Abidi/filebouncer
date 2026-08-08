@@ -64,10 +64,10 @@ Upload pipelines need more than “check the file extension.” Files can claim 
 Results follow a clear model:
 
 - **Findings** → `result.threats[]` (e.g. `MIME_MISMATCH`, `UNSAFE_ENTRY_PATH`)
-- **Scan failures** → `result.errors[]` (corrupt archive, timeout)
+- **Scan failures** → `result.errors[]` (scanner crash, timeout)
 - **Programmer mistakes** → throw `FileBouncerError` (bad config, unsupported input)
 
-Detections are **returned as data**, not thrown — your middleware decides whether to reject the upload.
+`result.ok` is `true` only when nothing met `blockThreshold` **and** the scan finished without errors or timeout. Detections and scan failures are **returned as data**, not thrown — your middleware can still inspect `threats` / `errors` for details.
 
 ---
 

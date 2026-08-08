@@ -125,10 +125,11 @@ export class FileSecurityEngine {
 
     const blockThreshold = this.config.blockThreshold ?? "high";
     const isBlocked = threats.some((t) => meetsThreshold(t.severity, blockThreshold));
+    const hasScanFailure = errors.length > 0 || timedOut;
     const verdict = computeVerdict(threats);
 
     return {
-      ok: !isBlocked,
+      ok: !isBlocked && !hasScanFailure,
       verdict,
       filename: normalized.filename,
       size: normalized.size,
