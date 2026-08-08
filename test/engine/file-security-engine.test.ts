@@ -67,9 +67,7 @@ describe("FileSecurityEngine", () => {
       ]),
     );
     expect(result.scannersSkipped).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: "next", reason: "timeout" }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ name: "next", reason: "timeout" })]),
     );
   });
 
