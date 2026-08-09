@@ -1,0 +1,61 @@
+name: Detection bypass
+description: filebouncer incorrectly accepts a file that should be blocked.
+title: "bypass: "
+labels: ["bug", "false-negative"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report a file that **should** produce a blocking finding but was accepted (`ok: true` or missing expected threat).
+        Prefer a **minimal** sample. Do not upload real malware.
+  - type: input
+    id: package-version
+    attributes:
+      label: `@filebouncer/core` version
+      placeholder: 0.5.0
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Engine config
+      description: Scanners enabled, allow-lists, thresholds, etc.
+      render: ts
+      placeholder: |
+        {
+          scanners: ["mime", "metadata", "csv", "archive", "polyglot"],
+          blockThreshold: "high"
+        }
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Actual `ScanResult` (or relevant fields)
+      description: Paste `ok`, `threats`, `errors`, `detectedMime`, etc.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Which threat code(s) should have fired? Should `ok` be false?
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: How to reproduce the file
+      description: |
+        Attach a tiny sample **or** give exact steps/script to build it
+        (e.g. `cat photo.jpg secret.zip > polyglot.jpg`).
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: This sample is for structural testing only (not malware), and I have the right to share it.
+          required: true

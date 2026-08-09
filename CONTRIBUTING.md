@@ -1,8 +1,21 @@
 # Contributing to filebouncer
 
-Thank you for considering contributing to filebouncer! We appreciate your time and effort in making this project better. Please take a moment to review the following guidelines before getting started.
+Thanks for helping make upload pipelines safer. This project focuses on **structural and metadata** checks — not antivirus signatures.
 
-## Getting Started
+## Ways to contribute
+
+| Goal | What to do |
+| ---- | ---------- |
+| Report a bypass | Open [Detection bypass](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=detection-bypass.yml) |
+| Report a false positive | Open [False positive](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=false-positive.yml) |
+| Suggest a new detection | Open [New file format](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=new-file-format.yml) |
+| Add a detector | Follow [Writing a scanner](#writing-a-scanner) |
+| Add a regression case | Prefer a **generated** buffer in `test/` (see existing polyglot/archive tests). Tiny committed fixtures only when generation is impractical. |
+| Improve docs | Edit `README.md` or this file |
+
+**Safety:** share minimal structural samples only. Do not upload malware or files you do not have rights to share.
+
+## Getting started
 
 1. Fork the repository and clone it locally.
 
@@ -17,7 +30,7 @@ Thank you for considering contributing to filebouncer! We appreciate your time a
    git checkout -b feat/your-feature
    ```
 
-3. Install dependencies (requires Node.js >= 22 and pnpm).
+3. Install dependencies (requires Node.js ≥ 20 and pnpm).
 
    ```bash
    pnpm install
@@ -55,21 +68,22 @@ Thank you for considering contributing to filebouncer! We appreciate your time a
 
 9. Add a **description** explaining what your PR does and why.
 
-## Project Structure
+## Project structure
 
 ```
 src/
   engine/          — FileSecurityEngine, budgets, verdict logic
-  scanners/        — Built-in scanners (mime, metadata, csv, archive)
+  scanners/        — Built-in scanners (mime, metadata, csv, archive, polyglot)
   util/            — Helpers (detectType)
   input.ts         — Input normalization
   types.ts         — Public type surface
   index.ts         — Package entry point / exports
 test/
+  engine/          — Engine orchestration tests
   scanners/        — Scanner tests (one file per scanner)
 ```
 
-## Code Style
+## Code style
 
 - Run `pnpm format` before committing (Prettier handles formatting).
 - Use clear and descriptive variable and function names.
@@ -77,28 +91,23 @@ test/
 - Keep module-level helpers as plain functions only when they are stateless.
 - Avoid comments that just narrate what code does — only explain the "why" when non-obvious.
 
-## Writing a Scanner
+## Writing a scanner
 
 Each built-in scanner follows this pattern:
 
 1. Create `src/scanners/your-scanner.ts` with a class implementing `Scanner`.
-2. Add config interface to `src/types.ts` if needed.
+2. Add a config interface to `src/types.ts` if needed.
 3. Wire it in `src/engine/built-ins.ts`.
 4. Export from `src/scanners/index.ts` and `src/index.ts`.
-5. Add tests in `test/scanners/your-scanner.test.ts`.
+5. Add tests in `test/scanners/your-scanner.test.ts` (prefer generating samples in the test).
+6. Update the README roadmap / “What it checks” if you ship a new scanner.
 
-## Pull Request Guidelines
+## Pull request guidelines
 
 - Keep PRs **small and focused** — one scanner or feature per PR.
 - All checks must pass: `typecheck`, `lint`, `test`, `build`.
 - Include tests for new functionality.
-- Update the README roadmap if your PR ships a new scanner.
-
-## Issues and Discussions
-
-- Feel free to open an issue for bug reports or feature requests.
-- Participate in discussions on existing issues.
-- If you're unsure about an approach, open an issue to discuss before writing code.
+- For detection changes, include a failing case before the fix when possible.
 
 ## License
 
