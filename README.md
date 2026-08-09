@@ -1,6 +1,6 @@
 # filebouncer
 
-**Structural file validation for Node** checks uploads for MIME mismatches, unsafe archive entries, oversized archives, and risky spreadsheet cells.
+**Structural file validation for Node** checks uploads for MIME mismatches, unsafe archive entries, oversized archives, risky spreadsheet cells, and polyglot (multi format) files.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](package.json)
@@ -15,7 +15,7 @@
 
 ## Status
 
-**v0.3.0**. The scan engine plus MIME, metadata, CSV, and archive scanners are available. Public API may still evolve.
+**v0.3.0**. The scan engine plus MIME, metadata, CSV, archive, and polyglot scanners are available. Public API may still evolve.
 
 ---
 
@@ -29,7 +29,7 @@ npm install @filebouncer/core
 import { FileSecurityEngine } from "@filebouncer/core";
 
 const engine = new FileSecurityEngine({
-  scanners: ["mime", "metadata", "csv", "archive"],
+  scanners: ["mime", "metadata", "csv", "archive", "polyglot"],
   maxFileSize: 50 * 1024 * 1024,
 });
 
@@ -94,6 +94,7 @@ filebouncer fills the gap: **lightweight, typed, Node-native structural checks**
 | **Risky spreadsheet cells** | Cells that start with characters office apps may treat specially |
 | **Unsafe archive entries**  | Absolute paths, link entries, suspicious names                   |
 | **Metadata anomalies**      | Double extensions, executable extensions on “documents”          |
+| **Polyglot files**          | One buffer that looks like more than one format (e.g. image+ZIP) |
 
 ### What it does **not** detect
 
@@ -269,7 +270,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for PR guidelines.
 - [x] CSV scanner
 - [x] Archive scanner
 - [x] First npm release
-- [ ] Polyglot scanner
+- [x] Polyglot scanner
 - [ ] Express & Fastify middleware
 - [ ] Stable `v1.0.0` API
 
