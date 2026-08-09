@@ -5,6 +5,7 @@ export type {
   EngineConfig,
   MetadataConfig,
   MimeConfig,
+  PolyglotConfig,
   ScanError,
   ScanOptions,
   ScanResult,
@@ -28,4 +29,10 @@ export { detectType } from "./util/detect-type";
 
 export { FileSecurityEngine, scanBuffer } from "./engine";
 
-export { ArchiveScanner, CsvScanner, MetadataScanner, MimeScanner } from "./scanners";
+export {
+  ArchiveScanner,
+  CsvScanner,
+  MetadataScanner,
+  MimeScanner,
+  PolyglotScanner,
+} from "./scanners";

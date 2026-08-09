@@ -2,6 +2,7 @@ import { ArchiveScanner } from "../scanners/archive";
 import { CsvScanner } from "../scanners/csv";
 import { MetadataScanner } from "../scanners/metadata";
 import { MimeScanner } from "../scanners/mime";
+import { PolyglotScanner } from "../scanners/polyglot";
 import type { EngineConfig, Scanner } from "../types";
 
 export const resolveBuiltInScanners = (config: EngineConfig): Scanner[] => {
@@ -24,6 +25,10 @@ export const resolveBuiltInScanners = (config: EngineConfig): Scanner[] => {
 
   if (selected === "all" || selected.includes("archive")) {
     scanners.push(new ArchiveScanner(config.archive));
+  }
+
+  if (selected === "all" || selected.includes("polyglot")) {
+    scanners.push(new PolyglotScanner(config.polyglot));
   }
 
   return scanners;

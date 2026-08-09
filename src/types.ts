@@ -177,6 +177,24 @@ export interface MetadataConfig {
   allowDoubleExtension?: boolean;
 }
 
+export interface PolyglotConfig {
+  /**
+   * Ignore secondary format hits whose byte offset is below this value.
+   * Defaults to `0`.
+   */
+  minSecondaryOffset?: number;
+  /**
+   * Maximum number of leading bytes to inspect for secondary signatures.
+   * Defaults to the full buffer.
+   */
+  maxScanBytes?: number;
+  /**
+   * Allowed trailing bytes after a complete JPEG/PNG before flagging
+   * unexplained trailing content. Defaults to `32`.
+   */
+  trailingTolerance?: number;
+}
+
 export interface EngineConfig {
   /** Built-in scanners to enable. `"all"` enables every shipped scanner. */
   scanners?: BuiltInScannerName[] | "all";
@@ -197,6 +215,7 @@ export interface EngineConfig {
   csv?: CsvConfig;
   mime?: MimeConfig;
   metadata?: MetadataConfig;
+  polyglot?: PolyglotConfig;
 }
 
 /**
