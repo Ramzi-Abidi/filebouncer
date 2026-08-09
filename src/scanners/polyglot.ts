@@ -65,12 +65,12 @@ const MAGIC_RULES: {
   },
 ];
 
-const makeHit = (
-  family: string,
-  mime: string,
-  offset: number,
-  evidence: string,
-): FormatHit => ({ family, mime, offset, evidence });
+const makeHit = (family: string, mime: string, offset: number, evidence: string): FormatHit => ({
+  family,
+  mime,
+  offset,
+  evidence,
+});
 
 export class PolyglotScanner implements Scanner {
   readonly name = "polyglot";
