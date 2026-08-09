@@ -126,12 +126,8 @@ describe("polyglot scanner", () => {
         }),
       ]),
     );
-    expect(result.threats[0]?.meta).toEqual(
-      expect.objectContaining({
-        secondary: expect.arrayContaining([
-          expect.objectContaining({ family: "zip", evidence: "zip-eocd" }),
-        ]),
-      }),
+    expect(result.threats[0]?.meta?.secondary).toEqual(
+      expect.arrayContaining([expect.objectContaining({ family: "zip", evidence: "zip-eocd" })]),
     );
   });
 

@@ -102,7 +102,7 @@ export class PolyglotScanner implements Scanner {
 
     const distinctSecondaries = secondary.filter((hit) => {
       if (hit.offset < this.options.minSecondaryOffset) return false;
-      if (primary && hit.family === primary.family) return false;
+      if (primary?.family === hit.family) return false;
       return true;
     });
 
