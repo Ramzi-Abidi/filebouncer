@@ -1,4 +1,5 @@
 # filebouncer
+<img width="1672" height="941" alt="filebouncer-pic" src="https://github.com/user-attachments/assets/1c6ad73b-ddb0-4976-b97b-2ff320d54d40" />
 
 **Detect files that aren't what they claim to be.**
 
