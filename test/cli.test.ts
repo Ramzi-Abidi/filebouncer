@@ -1,6 +1,8 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { crc32 } from "node:zlib";
 
 import { describe, expect, it } from "vitest";
@@ -157,5 +159,24 @@ describe("runCli", () => {
       error: () => undefined,
     });
     expect(code).toBe(2);
+  });
+
+  it("runs when invoked through a bin-style symlink to dist/cli.js", async () => {
+    const cliJs = resolve("dist/cli.js");
+    if (!existsSync(cliJs)) {
+      return; // requires `pnpm build` first
+    }
+
+    const dir = await mkdtemp(join(tmpdir(), "fb-cli-bin-"));
+    const file = join(dir, "polyglot.jpg");
+    const bin = join(dir, "core");
+    await writeFile(file, Buffer.concat([createMinimalJpeg(), createRawZip("a.txt")]));
+    await symlink(cliJs, bin);
+
+    // Invoke via node so argv[1] is still the symlink path (same as npm bin shims).
+    const result = spawnSync(process.execPath, [bin, file], { encoding: "utf8" });
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("POLYGLOT_DETECTED");
+    expect(result.stdout).toContain("Result: BLOCK");
   });
 });

@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs";
 import { access } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { basename, resolve } from "node:path";
@@ -152,7 +153,9 @@ const isMain = (): boolean => {
   const entry = process.argv[1];
   if (!entry) return false;
   try {
-    return import.meta.url === pathToFileURL(resolve(entry)).href;
+    // Bin shims are symlinks (e.g. node_modules/.bin/core → dist/cli.js).
+    // Compare against the real path so npx / pnpm exec actually run the CLI.
+    return import.meta.url === pathToFileURL(realpathSync(resolve(entry))).href;
   } catch {
     return false;
   }
