@@ -1,0 +1,48 @@
+name: New file format
+description: Suggest a format or structural pattern filebouncer should detect.
+title: "feat: detect "
+labels: ["enhancement", "scanner"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Propose a **structural** detection (not malware signatures).
+        Prefer a minimal sample or a script that generates one.
+  - type: input
+    id: format
+    attributes:
+      label: What format or pattern should filebouncer detect?
+      description: e.g. HTML embedded in JPEG, RAR trailing after PNG, OLE in PDF
+      placeholder: JPEG + HTML polyglot
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why does this matter for upload pipelines?
+      description: What can go wrong if this is missed?
+    validations:
+      required: true
+  - type: textarea
+    id: how
+    attributes:
+      label: How could we detect it?
+      description: Magic bytes, trailing content, secondary markers, etc. Links to specs or research welcome.
+    validations:
+      required: false
+  - type: textarea
+    id: sample
+    attributes:
+      label: Minimal sample
+      description: |
+        Attach a tiny sample, or paste a short script that generates one.
+        Do not upload malware or copyrighted documents you do not have rights to share.
+    validations:
+      required: false
+  - type: input
+    id: expected-code
+    attributes:
+      label: Suggested threat code (optional)
+      placeholder: POLYGLOT_DETECTED
+    validations:
+      required: false

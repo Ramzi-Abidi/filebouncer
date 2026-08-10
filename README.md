@@ -1,6 +1,10 @@
 # filebouncer
 
-**Structural file validation for Node** checks uploads for MIME mismatches, unsafe archive entries, oversized archives, risky spreadsheet cells, and polyglot (multi format) files.
+**Detect files that aren't what they claim to be.**
+
+Structural file security for Node.js upload pipelines.
+
+filebouncer inspects untrusted files for structural and metadata-based threats before your application processes them — including MIME mismatches, unsafe archives, risky spreadsheet cells, and polyglot files.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](package.json)
@@ -9,13 +13,97 @@
 [![npm](https://img.shields.io/npm/v/@filebouncer/core.svg)](https://www.npmjs.com/package/@filebouncer/core)
 
 > **filebouncer is not antivirus.**  
-> It checks **file structure and metadata** so your upload pipeline can reject unsafe files early.
+> It detects file structure and metadata risks. Pair it with ClamAV or another malware scanner when you need malware detection too.
+
+---
+
+## CLI
+
+Scan any file on disk — no application code required:
+
+```bash
+npx @filebouncer/core ./your-file.jpg
+```
+
+Example output when the file is a JPEG that also contains a ZIP:
+
+```text
+filebouncer v0.6.0
+
+File: polyglot.jpg
+Size: 38137 bytes
+Detected MIME: image/jpeg
+
+Findings:
+  high     POLYGLOT_DETECTED
+           File appears to match more than one format (image/jpeg and application/zip @ 38115)
+
+Result: BLOCK
+```
+
+Example output for a normal image:
+
+```text
+filebouncer v0.6.0
+
+File: photo.jpg
+Size: 37961 bytes
+Detected MIME: image/jpeg
+
+Findings: (none)
+
+Result: OK
+```
+
+To reproduce the blocked example locally: `cat photo.jpg secret.zip > polyglot.jpg`, then scan `polyglot.jpg`.
+
+`npx @filebouncer/core` runs the CLI via the `core` bin (required for scoped packages). After install, `filebouncer` works too. Use `--json` only when you need machine-readable output for scripts.
+
+Exit codes: `0` = OK · `1` = BLOCK · `2` = unexpected error · `3` = usage error.
+
+---
+
+## Why does this matter?
+
+Checking a filename or `Content-Type` isn't enough.
+
+A file called `photo.jpg` can contain more than a JPEG.
+
+For example, a valid JPEG and a valid ZIP archive can be concatenated into a single file:
+
+```text
+photo.jpg + secret.zip
+        ↓
+   polyglot.jpg
+```
+
+The resulting file can still open as an image while also containing a valid ZIP archive.
+
+The same problem appears in other forms:
+
+- A `.jpg` whose actual bytes are not JPEG
+- A client claiming `image/jpeg` while uploading another format
+- Archives containing `../` paths
+- Archives with extreme compression ratios
+- Spreadsheet cells that can be interpreted as formulas by office software
+- Files containing multiple recognizable formats
+
+filebouncer is designed to catch these structural problems before they reach the rest of your application.
+
+| Approach                     | Problem                                             |
+| ---------------------------- | --------------------------------------------------- |
+| Extension / MIME header only | Easy to spoof                                       |
+| Hand-rolled archive checks   | Easy to miss edge cases                             |
+| Antivirus alone              | Great for malware, not for structural upload issues |
+| Heavy security platforms     | Often overkill for a Node upload endpoint           |
+
+filebouncer fills the gap: **lightweight, typed, Node-native structural checks** you drop into Express, Fastify, or any pipeline.
 
 ---
 
 ## Status
 
-**v0.3.0**. The scan engine plus MIME, metadata, CSV, archive, and polyglot scanners are available. Public API may still evolve.
+**v0.6.0**. The scan engine, CLI, and MIME / metadata / CSV / archive / polyglot scanners are available. Public API may still evolve.
 
 ---
 
@@ -57,10 +145,6 @@ const result = await scanBuffer(uploadBuffer, { filename: "report.pdf" });
 
 ## Overview
 
-Upload pipelines need more than “check the file extension.” Files can claim the wrong type, carry unsafe archive entry names, or include spreadsheet cells that are risky when opened in office software.
-
-**filebouncer** is a small, modular scanning layer for Node.js. It inspects file **structure and behavior** — the things that break apps even when no malware signature is involved.
-
 Results follow a clear model:
 
 - **Findings** → `result.threats[]` (e.g. `MIME_MISMATCH`, `UNSAFE_ENTRY_PATH`)
@@ -68,19 +152,6 @@ Results follow a clear model:
 - **Programmer mistakes** → throw `FileBouncerError` (bad config, unsupported input)
 
 `result.ok` is `true` only when nothing met `blockThreshold` **and** the scan finished without errors or timeout. Detections and scan failures are **returned as data**, not thrown — your middleware can still inspect `threats` / `errors` for details.
-
----
-
-## Why filebouncer
-
-| Approach                     | Problem                                             |
-| ---------------------------- | --------------------------------------------------- |
-| Extension / MIME header only | Easy to spoof                                       |
-| Hand-rolled archive checks   | Easy to miss edge cases                             |
-| Antivirus alone              | Great for malware, not for structural upload issues |
-| Heavy security platforms     | Often overkill for a Node upload endpoint           |
-
-filebouncer fills the gap: **lightweight, typed, Node-native structural checks** you drop into Express, Fastify, or any pipeline.
 
 ---
 
@@ -108,6 +179,7 @@ Pair filebouncer with ClamAV (or similar) if you need both **structural checks**
 ## Features
 
 - **Scan engine** — single entry point via `FileSecurityEngine.scan()`
+- **CLI** — `npx @filebouncer/core <file>` (or `filebouncer` after install)
 - **Buffer-first, small files** — simple in-memory model; size limits enforced early
 - **Multiple input shapes** — `Buffer`, `Uint8Array`, `Blob`, `File`, streams, disk paths
 - **Pluggable scanners** — implement `Scanner` or pass `customScanners` in config
@@ -255,7 +327,23 @@ pnpm lint
 pnpm test
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for PR guidelines.
+---
+
+## Contributing
+
+Ways to help:
+
+|     | What                                      | Start here                                                                                                                                                                                                    |
+| --- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ⭐  | Star the repo if filebouncer is useful    | [GitHub](https://github.com/Ramzi-Abidi/fileBouncer)                                                                                                                                                          |
+| 🐛  | Report a detection miss or false positive | [Detection bypass](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=detection-bypass.yml) · [False positive](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=false-positive.yml) |
+| 💡  | Propose a new format / structural check   | [New file format](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=new-file-format.yml)                                                                                                         |
+| 🔧  | Add or improve a detector                 | [CONTRIBUTING.md](CONTRIBUTING.md#writing-a-scanner)                                                                                                                                                          |
+| 📖  | Improve documentation                     | PRs against `README.md` / `CONTRIBUTING.md` welcome                                                                                                                                                           |
+
+Prefer a **minimal sample** or a short script that generates one. Do not upload malware.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and PR guidelines.
 
 ---
 
@@ -271,6 +359,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for PR guidelines.
 - [x] Archive scanner
 - [x] First npm release
 - [x] Polyglot scanner
+- [x] CLI (`filebouncer` / `npx @filebouncer/core`)
 - [ ] Express & Fastify middleware
 - [ ] Stable `v1.0.0` API
 

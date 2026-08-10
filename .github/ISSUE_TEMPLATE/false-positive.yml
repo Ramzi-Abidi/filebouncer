@@ -1,0 +1,60 @@
+name: False positive
+description: filebouncer incorrectly flags a legitimate file.
+title: "false-positive: "
+labels: ["bug", "false-positive"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report a **legitimate** file that filebouncer blocks or flags incorrectly.
+        Prefer a minimal sample and the exact threat code(s).
+  - type: input
+    id: package-version
+    attributes:
+      label: "@filebouncer/core version"
+      placeholder: "0.6.0"
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Engine config
+      render: ts
+      placeholder: |
+        {
+          scanners: ["mime", "metadata", "polyglot"],
+          blockThreshold: "high"
+        }
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Actual `ScanResult` (or relevant fields)
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: why-legit
+    attributes:
+      label: Why is this file legitimate?
+      description: What produced it (export tool, app, OS)? Why should it be accepted?
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: How to reproduce the file
+      description: Attach a tiny sample or steps to generate an equivalent file.
+    validations:
+      required: true
+  - type: dropdown
+    id: severity-impact
+    attributes:
+      label: Impact
+      options:
+        - Blocks uploads in production
+        - Noisy but workable (medium / info findings)
+        - Documentation / expectation mismatch
+    validations:
+      required: true
