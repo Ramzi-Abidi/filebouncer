@@ -4,14 +4,14 @@ Thanks for helping make upload pipelines safer. This project focuses on **struct
 
 ## Ways to contribute
 
-| Goal | What to do |
-| ---- | ---------- |
-| Report a bypass | Open [Detection bypass](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=detection-bypass.yml) |
-| Report a false positive | Open [False positive](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=false-positive.yml) |
-| Suggest a new detection | Open [New file format](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=new-file-format.yml) |
-| Add a detector | Follow [Writing a scanner](#writing-a-scanner) |
-| Add a regression case | Prefer a **generated** buffer in `test/` (see existing polyglot/archive tests). Tiny committed fixtures only when generation is impractical. |
-| Improve docs | Edit `README.md` or this file |
+| Goal                    | What to do                                                                                                                                   |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Report a bypass         | Open [Detection bypass](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=detection-bypass.yml)                                 |
+| Report a false positive | Open [False positive](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=false-positive.yml)                                     |
+| Suggest a new detection | Open [New file format](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=new-file-format.yml)                                   |
+| Add a detector          | Follow [Writing a scanner](#writing-a-scanner)                                                                                               |
+| Add a regression case   | Prefer a **generated** buffer in `test/` (see existing polyglot/archive tests). Tiny committed fixtures only when generation is impractical. |
+| Improve docs            | Edit `README.md` or this file                                                                                                                |
 
 **Safety:** share minimal structural samples only. Do not upload malware or files you do not have rights to share.
 

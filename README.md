@@ -333,13 +333,13 @@ pnpm test
 
 Ways to help:
 
-| | What | Start here |
-| --- | --- | --- |
-| ⭐ | Star the repo if filebouncer is useful | [GitHub](https://github.com/Ramzi-Abidi/fileBouncer) |
-| 🐛 | Report a detection miss or false positive | [Detection bypass](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=detection-bypass.yml) · [False positive](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=false-positive.yml) |
-| 💡 | Propose a new format / structural check | [New file format](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=new-file-format.yml) |
-| 🔧 | Add or improve a detector | [CONTRIBUTING.md](CONTRIBUTING.md#writing-a-scanner) |
-| 📖 | Improve documentation | PRs against `README.md` / `CONTRIBUTING.md` welcome |
+|     | What                                      | Start here                                                                                                                                                                                                    |
+| --- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ⭐  | Star the repo if filebouncer is useful    | [GitHub](https://github.com/Ramzi-Abidi/fileBouncer)                                                                                                                                                          |
+| 🐛  | Report a detection miss or false positive | [Detection bypass](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=detection-bypass.yml) · [False positive](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=false-positive.yml) |
+| 💡  | Propose a new format / structural check   | [New file format](https://github.com/Ramzi-Abidi/fileBouncer/issues/new?template=new-file-format.yml)                                                                                                         |
+| 🔧  | Add or improve a detector                 | [CONTRIBUTING.md](CONTRIBUTING.md#writing-a-scanner)                                                                                                                                                          |
+| 📖  | Improve documentation                     | PRs against `README.md` / `CONTRIBUTING.md` welcome                                                                                                                                                           |
 
 Prefer a **minimal sample** or a short script that generates one. Do not upload malware.
 

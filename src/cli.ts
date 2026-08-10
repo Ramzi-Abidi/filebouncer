@@ -137,10 +137,7 @@ export const runCli = async (
   }
 
   const engine = new FileSecurityEngine({ scanners: "all" });
-  const result = await engine.scan(
-    { path: filePath },
-    { filename: basename(filePath) },
-  );
+  const result = await engine.scan({ path: filePath }, { filename: basename(filePath) });
 
   if (opts.json) {
     io.log(JSON.stringify(result, null, 2));
