@@ -1,6 +1,6 @@
 {
   "name": "@filebouncer/core",
-  "version": "0.3.0",
+  "version": "0.6.0",
   "description": "Lightweight Node.js library for structural validation of uploaded files.",
   "license": "MIT",
   "packageManager": "pnpm@11.1.0",
@@ -10,6 +10,10 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "core": "./dist/cli.js",
+    "filebouncer": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -19,6 +23,7 @@
   "files": [
     "dist/index.js",
     "dist/index.d.ts",
+    "dist/cli.js",
     "README.md",
     "LICENSE"
   ],
@@ -37,6 +42,7 @@
     "validation",
     "mime",
     "scanner",
+    "cli",
     "nodejs"
   ],
   "repository": {

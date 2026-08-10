@@ -60,8 +60,8 @@ Thanks for helping make upload pipelines safer. This project focuses on **struct
 7. Before creating a pull request, rebase with main to avoid conflicts.
 
    ```bash
-   git fetch upstream
-   git rebase upstream/main
+   git fetch
+   git rebase main
    ```
 
 8. Create a pull request against the `main` branch.
@@ -75,12 +75,14 @@ src/
   engine/          — FileSecurityEngine, budgets, verdict logic
   scanners/        — Built-in scanners (mime, metadata, csv, archive, polyglot)
   util/            — Helpers (detectType)
+  cli.ts           — filebouncer CLI (bin entry)
   input.ts         — Input normalization
   types.ts         — Public type surface
   index.ts         — Package entry point / exports
 test/
   engine/          — Engine orchestration tests
   scanners/        — Scanner tests (one file per scanner)
+  cli.test.ts      — CLI argument parsing and smoke runs
 ```
 
 ## Code style

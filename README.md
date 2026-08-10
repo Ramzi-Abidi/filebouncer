@@ -17,6 +17,52 @@ filebouncer inspects untrusted files for structural and metadata-based threats b
 
 ---
 
+## CLI
+
+Scan any file on disk — no application code required:
+
+```bash
+npx @filebouncer/core ./your-file.jpg
+```
+
+Example output when the file is a JPEG that also contains a ZIP:
+
+```text
+filebouncer v0.6.0
+
+File: polyglot.jpg
+Size: 38137 bytes
+Detected MIME: image/jpeg
+
+Findings:
+  high     POLYGLOT_DETECTED
+           File appears to match more than one format (image/jpeg and application/zip @ 38115)
+
+Result: BLOCK
+```
+
+Example output for a normal image:
+
+```text
+filebouncer v0.6.0
+
+File: photo.jpg
+Size: 37961 bytes
+Detected MIME: image/jpeg
+
+Findings: (none)
+
+Result: OK
+```
+
+To reproduce the blocked example locally: `cat photo.jpg secret.zip > polyglot.jpg`, then scan `polyglot.jpg`.
+
+`npx @filebouncer/core` runs the CLI via the `core` bin (required for scoped packages). After install, `filebouncer` works too. Use `--json` only when you need machine-readable output for scripts.
+
+Exit codes: `0` = OK · `1` = BLOCK · `2` = unexpected error · `3` = usage error.
+
+---
+
 ## Why does this matter?
 
 Checking a filename or `Content-Type` isn't enough.
@@ -57,7 +103,7 @@ filebouncer fills the gap: **lightweight, typed, Node-native structural checks**
 
 ## Status
 
-**v0.5.0**. The scan engine plus MIME, metadata, CSV, archive, and polyglot scanners are available. Public API may still evolve.
+**v0.6.0**. The scan engine, CLI, and MIME / metadata / CSV / archive / polyglot scanners are available. Public API may still evolve.
 
 ---
 
@@ -133,6 +179,7 @@ Pair filebouncer with ClamAV (or similar) if you need both **structural checks**
 ## Features
 
 - **Scan engine** — single entry point via `FileSecurityEngine.scan()`
+- **CLI** — `npx @filebouncer/core <file>` (or `filebouncer` after install)
 - **Buffer-first, small files** — simple in-memory model; size limits enforced early
 - **Multiple input shapes** — `Buffer`, `Uint8Array`, `Blob`, `File`, streams, disk paths
 - **Pluggable scanners** — implement `Scanner` or pass `customScanners` in config
@@ -312,6 +359,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and PR guidelines.
 - [x] Archive scanner
 - [x] First npm release
 - [x] Polyglot scanner
+- [x] CLI (`filebouncer` / `npx @filebouncer/core`)
 - [ ] Express & Fastify middleware
 - [ ] Stable `v1.0.0` API
 
