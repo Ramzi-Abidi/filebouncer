@@ -28,7 +28,7 @@ npx @filebouncer/core ./your-file.jpg
 Example output when the file is a JPEG that also contains a ZIP:
 
 ```text
-filebouncer v0.6.0
+filebouncer v0.6.1
 
 File: polyglot.jpg
 Size: 38137 bytes
@@ -44,7 +44,7 @@ Result: BLOCK
 Example output for a normal image:
 
 ```text
-filebouncer v0.6.0
+filebouncer v0.6.1
 
 File: photo.jpg
 Size: 37961 bytes
@@ -103,7 +103,7 @@ filebouncer fills the gap: **lightweight, typed, Node-native structural checks**
 
 ## Status
 
-**v0.6.0**. The scan engine, CLI, and MIME / metadata / CSV / archive / polyglot scanners are available. Public API may still evolve.
+**v0.6.1**. The scan engine, CLI, and MIME / metadata / CSV / archive / polyglot scanners are available. Public API may still evolve.
 
 ---
 
