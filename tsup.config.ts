@@ -19,11 +19,12 @@ export default defineConfig({
   treeshake: true,
   splitting: false,
   minify: false,
-  onSuccess() {
+  onSuccess: () => {
     const cliPath = "dist/cli.js";
     const content = readFileSync(cliPath, "utf8");
     if (!content.startsWith("#!")) {
       writeFileSync(cliPath, `#!/usr/bin/env node\n${content}`);
     }
+    return Promise.resolve();
   },
 });
