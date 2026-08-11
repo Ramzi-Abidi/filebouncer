@@ -169,6 +169,7 @@ Results follow a clear model:
 | --------------------------- | ---------------------------------------------------------------- |
 | **Unsafe archive paths**    | Entry names that leave the extract directory                     |
 | **Archive size limits**     | Too many entries, huge uncompressed size, extreme ratios         |
+| **Encrypted ZIP entries**   | Password-protected payloads that cannot be inspected             |
 | **MIME mismatches**         | Extension or declared MIME disagrees with file signature         |
 | **Risky spreadsheet cells** | Cells that start with characters office apps may treat specially |
 | **Unsafe archive entries**  | Absolute paths, link entries, suspicious names                   |
