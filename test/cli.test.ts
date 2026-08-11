@@ -161,6 +161,19 @@ describe("runCli", () => {
     expect(code).toBe(2);
   });
 
+  it("returns 2 with a clear message when the path is a directory", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "fb-cli-dir-"));
+
+    const logs: string[] = [];
+    const code = await runCli([dir], {
+      log: (msg) => logs.push(msg),
+      error: (msg) => logs.push(msg),
+    });
+
+    expect(code).toBe(2);
+    expect(logs.join("\n")).toContain("Not a file");
+  });
+
   it("runs when invoked through a bin-style symlink to dist/cli.js", async () => {
     const cliJs = resolve("dist/cli.js");
     if (!existsSync(cliJs)) {
