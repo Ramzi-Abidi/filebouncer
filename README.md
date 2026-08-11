@@ -155,6 +155,12 @@ Results follow a clear model:
 
 `result.ok` is `true` only when nothing met `blockThreshold` **and** the scan finished without errors or timeout. Detections and scan failures are **returned as data**, not thrown — your middleware can still inspect `threats` / `errors` for details.
 
+### Scan budgets and early stopping
+
+`timeoutMs` is a soft budget checked before each scanner starts. It does not cancel a `scanner.scan()` already in progress, so one slow scanner can run past the budget. Once the budget has been exceeded, later scanners are skipped, `timedOut` is `true`, `errors` includes a `SCAN_TIMEOUT` entry, and `result.ok` is `false`.
+
+`failFast: true` stops later scanners only after a `critical` finding. A `high` finding meets the default `blockThreshold` and makes `result.ok` false, but does not stop the remaining scanners by itself.
+
 ---
 
 ## What it checks
