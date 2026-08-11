@@ -1,10 +1,10 @@
-# filebouncer
+# filebouncer - catch suspicious uploads before they reach your app
 
-<img width="1672" height="941" alt="filebouncer-pic" src="https://github.com/user-attachments/assets/1c6ad73b-ddb0-4976-b97b-2ff320d54d40" />
+<div align="center">
+<img width="700" height="400" alt="filebouncer-pic" src="https://github.com/user-attachments/assets/1c6ad73b-ddb0-4976-b97b-2ff320d54d40" />
+</div>
 
 **Detect files that aren't what they claim to be.**
-
-Structural file security for Node.js upload pipelines.
 
 filebouncer inspects untrusted files for structural and metadata-based threats before your application processes them — including MIME mismatches, unsafe archives, risky spreadsheet cells, and polyglot files.
 
