@@ -1,6 +1,11 @@
 import type { CsvConfig, Scanner, ScannerContext, Threat } from "../types";
 
-const DEFAULT_PREFIXES = ["=", "+", "-", "@", "\t", "\r"];
+// "-" is deliberately excluded: it is the leading character of every negative
+// number (-12.5, -100), so including it by default turns ordinary CSV exports
+// into false positives. Formula injection via "-" alone is not a real Excel/
+// Sheets vector the way =, +, and @ are. Callers who want the old behaviour
+// can still pass csv: { prefixes: [...DEFAULT_PREFIXES, "-"] }.
+const DEFAULT_PREFIXES = ["=", "+", "@", "\t", "\r"];
 const DEFAULT_MAX_ROWS = 10_000;
 
 const CSV_EXTENSIONS = ["csv", "tsv"];

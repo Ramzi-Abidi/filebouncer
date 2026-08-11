@@ -42,6 +42,32 @@ describe("csv scanner", () => {
     );
   });
 
+  it("does not flag negative numbers by default", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["csv"] });
+    const result = await engine.scan(csv("name,amount\nAlice,-12.5\nBob,-100\nEve,-3"), {
+      filename: "export.csv",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.threats).toEqual([]);
+  });
+
+  it("still flags - as unsafe when explicitly opted back into the prefix list", async () => {
+    const engine = new FileSecurityEngine({
+      scanners: ["csv"],
+      csv: { prefixes: ["=", "+", "-", "@", "\t", "\r"] },
+    });
+    const result = await engine.scan(csv("name,amount\nAlice,-12.5"), {
+      filename: "export.csv",
+    });
+
+    expect(result.threats).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "CSV_UNSAFE_CELL", scanner: "csv" }),
+      ]),
+    );
+  });
+
   it("flags cells starting with @", async () => {
     const engine = new FileSecurityEngine({ scanners: ["csv"] });
     const result = await engine.scan(csv("value\n@SUM(1+1)"), { filename: "export.csv" });
