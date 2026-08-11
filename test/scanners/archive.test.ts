@@ -9,19 +9,24 @@ import { FileSecurityEngine } from "../../src/engine/file-security-engine";
 const S_IFLNK = 0o120000;
 
 /** Minimal stored ZIP with an arbitrary entry name (yazl rejects unsafe paths). */
-function createRawZip(fileName: string, data: Buffer = Buffer.from("x")): Buffer {
+function createRawZip(
+  fileName: string,
+  data: Buffer = Buffer.from("x"),
+  encryptionFlags = 0,
+): Buffer {
   const name = Buffer.from(fileName, "utf8");
   const crc = crc32(data);
+  const storedData = encryptionFlags & 1 ? Buffer.concat([Buffer.alloc(12), data]) : data;
 
   const localHeader = Buffer.alloc(30);
   localHeader.writeUInt32LE(0x04034b50, 0);
   localHeader.writeUInt16LE(20, 4);
-  localHeader.writeUInt16LE(0, 6);
+  localHeader.writeUInt16LE(encryptionFlags, 6);
   localHeader.writeUInt16LE(0, 8);
   localHeader.writeUInt16LE(0, 10);
   localHeader.writeUInt16LE(0, 12);
   localHeader.writeUInt32LE(crc, 14);
-  localHeader.writeUInt32LE(data.length, 18);
+  localHeader.writeUInt32LE(storedData.length, 18);
   localHeader.writeUInt32LE(data.length, 22);
   localHeader.writeUInt16LE(name.length, 26);
   localHeader.writeUInt16LE(0, 28);
@@ -30,12 +35,12 @@ function createRawZip(fileName: string, data: Buffer = Buffer.from("x")): Buffer
   centralHeader.writeUInt32LE(0x02014b50, 0);
   centralHeader.writeUInt16LE(20, 4);
   centralHeader.writeUInt16LE(20, 6);
-  centralHeader.writeUInt16LE(0, 8);
+  centralHeader.writeUInt16LE(encryptionFlags, 8);
   centralHeader.writeUInt16LE(0, 10);
   centralHeader.writeUInt16LE(0, 12);
   centralHeader.writeUInt16LE(0, 14);
   centralHeader.writeUInt32LE(crc, 16);
-  centralHeader.writeUInt32LE(data.length, 20);
+  centralHeader.writeUInt32LE(storedData.length, 20);
   centralHeader.writeUInt32LE(data.length, 24);
   centralHeader.writeUInt16LE(name.length, 28);
   centralHeader.writeUInt16LE(0, 30);
@@ -45,7 +50,7 @@ function createRawZip(fileName: string, data: Buffer = Buffer.from("x")): Buffer
   centralHeader.writeUInt32LE(0, 38);
   centralHeader.writeUInt32LE(0, 42);
 
-  const centralOffset = localHeader.length + name.length + data.length;
+  const centralOffset = localHeader.length + name.length + storedData.length;
   const end = Buffer.alloc(22);
   end.writeUInt32LE(0x06054b50, 0);
   end.writeUInt16LE(0, 4);
@@ -56,7 +61,7 @@ function createRawZip(fileName: string, data: Buffer = Buffer.from("x")): Buffer
   end.writeUInt32LE(centralOffset, 16);
   end.writeUInt16LE(0, 20);
 
-  return Buffer.concat([localHeader, name, data, centralHeader, name, end]);
+  return Buffer.concat([localHeader, name, storedData, centralHeader, name, end]);
 }
 
 async function createZip(
@@ -90,6 +95,39 @@ describe("archive scanner", () => {
     expect(result.ok).toBe(true);
     expect(result.threats).toEqual([]);
     expect(result.scannersRun).toContain("archive");
+  });
+
+  it("blocks encrypted zip entries", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const zip = createRawZip("private/report.txt", Buffer.from("secret"), 0x1);
+    const result = await engine.scan(zip, { filename: "protected.zip" });
+
+    expect(result.ok).toBe(false);
+    expect(result.threats).toEqual([
+      {
+        code: "ENCRYPTED_ENTRY",
+        scanner: "archive",
+        severity: "high",
+        message: "Archive entry is encrypted: private/report.txt",
+        path: "private/report.txt",
+      },
+    ]);
+  });
+
+  it("blocks strongly encrypted zip entries", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const zip = createRawZip("private/strong.bin", Buffer.from("secret"), 0x41);
+    const result = await engine.scan(zip, { filename: "protected.zip" });
+
+    expect(result.ok).toBe(false);
+    expect(result.threats).toEqual([
+      {
+        code: "ENCRYPTED_ENTRY",
+        scanner: "archive",
+        severity: "high",
+        message: "Archive contains a strongly encrypted entry",
+      },
+    ]);
   });
 
   it("flags ZIP slip path traversal", async () => {

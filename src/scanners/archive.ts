@@ -13,6 +13,7 @@ const DEFAULT_MAX_ENTRIES = 10_000;
 const DEFAULT_MAX_TOTAL_UNCOMPRESSED = 100 * 1024 * 1024;
 const DEFAULT_MAX_RATIO = 100;
 const MIN_COMPRESSED_FOR_RATIO = 64;
+const YAUZL_STRONG_ENCRYPTION_ERROR = "strong encryption is not supported";
 
 const UNIX_VERSION_MADE_BY = 3;
 const S_IFMT = 0o170000;
@@ -80,6 +81,17 @@ export class ArchiveScanner implements Scanner {
         entryCount += 1;
         const fileName = ArchiveScanner.decodeFileName(entry.fileName);
 
+        if (entry.isEncrypted()) {
+          threats.push(
+            this.makeThreat(
+              "ENCRYPTED_ENTRY",
+              "high",
+              `Archive entry is encrypted: ${fileName}`,
+              fileName,
+            ),
+          );
+        }
+
         this.checkEntryName(fileName, threats);
         this.checkSymlink(entry.versionMadeBy, entry.externalFileAttributes, fileName, threats);
 
@@ -139,7 +151,19 @@ export class ArchiveScanner implements Scanner {
           ),
         );
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message === YAUZL_STRONG_ENCRYPTION_ERROR) {
+        threats.push(
+          this.makeThreat(
+            "ENCRYPTED_ENTRY",
+            "high",
+            "Archive contains a strongly encrypted entry",
+            undefined,
+          ),
+        );
+        return threats;
+      }
+
       threats.push(
         this.makeThreat(
           "CORRUPT_ARCHIVE",
