@@ -1,6 +1,6 @@
 import type { CsvConfig, Scanner, ScannerContext, Threat } from "../types";
 
-const DEFAULT_PREFIXES = ["=", "+", "-", "@", "\t", "\r"];
+const DEFAULT_PREFIXES = ["=", "+", "@", "\t", "\r"];
 const DEFAULT_MAX_ROWS = 10_000;
 
 const CSV_EXTENSIONS = ["csv", "tsv"];

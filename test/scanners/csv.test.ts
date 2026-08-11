@@ -53,6 +53,27 @@ describe("csv scanner", () => {
     );
   });
 
+  it("allows negative numeric cells by default", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["csv"] });
+    const result = await engine.scan(csv("value\n-1\n-1.5"), { filename: "export.csv" });
+
+    expect(result.threats).toEqual([]);
+  });
+
+  it("allows callers to explicitly disallow negative cells", async () => {
+    const engine = new FileSecurityEngine({
+      scanners: ["csv"],
+      csv: { prefixes: ["=", "+", "-", "@", "\t", "\r"] },
+    });
+    const result = await engine.scan(csv("value\n-1"), { filename: "export.csv" });
+
+    expect(result.threats).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "CSV_UNSAFE_CELL", scanner: "csv" }),
+      ]),
+    );
+  });
+
   it("flags formula cells after leading whitespace", async () => {
     const engine = new FileSecurityEngine({ scanners: ["csv"] });
     const result = await engine.scan(csv("value\n  =1+1"), { filename: "export.csv" });
