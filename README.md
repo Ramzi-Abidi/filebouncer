@@ -1,7 +1,11 @@
-# filebouncer - catch suspicious uploads before they reach your app
-
 <div align="center">
+
+# filebouncer
+
+catch suspicious uploads before they reach your app
+
 <img width="700" height="400" alt="filebouncer-pic" src="https://github.com/user-attachments/assets/1c6ad73b-ddb0-4976-b97b-2ff320d54d40" />
+
 </div>
 
 **Detect files that aren't what they claim to be.**
