@@ -65,6 +65,42 @@ Exit codes: `0` = OK · `1` = BLOCK · `2` = unexpected error · `3` = usage err
 
 ---
 
+## Quick start
+
+```bash
+npm install @filebouncer/core
+```
+
+```ts
+import { FileSecurityEngine } from "@filebouncer/core";
+
+const engine = new FileSecurityEngine({
+  scanners: ["mime", "metadata", "csv", "archive", "polyglot"],
+  maxFileSize: 50 * 1024 * 1024,
+});
+
+const result = await engine.scan(uploadBuffer, {
+  filename: "report.pdf",
+  declaredMime: "application/pdf",
+});
+
+if (!result.ok) {
+  console.log(result.threats);
+}
+```
+
+Enable stricter MIME checks with `mime: { strict: true, allowList: [...] }` — see [Usage](#usage).
+
+One-off scan without creating an engine:
+
+```ts
+import { scanBuffer } from "@filebouncer/core";
+
+const result = await scanBuffer(uploadBuffer, { filename: "report.pdf" });
+```
+
+---
+
 ## Why does this matter?
 
 Checking a filename or `Content-Type` isn't enough.
@@ -106,42 +142,6 @@ filebouncer fills the gap: **lightweight, typed, Node-native structural checks**
 ## Status
 
 **v0.6.1**. The scan engine, CLI, and MIME / metadata / CSV / archive / polyglot scanners are available. Public API may still evolve.
-
----
-
-## Quick start
-
-```bash
-npm install @filebouncer/core
-```
-
-```ts
-import { FileSecurityEngine } from "@filebouncer/core";
-
-const engine = new FileSecurityEngine({
-  scanners: ["mime", "metadata", "csv", "archive", "polyglot"],
-  maxFileSize: 50 * 1024 * 1024,
-});
-
-const result = await engine.scan(uploadBuffer, {
-  filename: "report.pdf",
-  declaredMime: "application/pdf",
-});
-
-if (!result.ok) {
-  console.log(result.threats);
-}
-```
-
-Enable stricter MIME checks with `mime: { strict: true, allowList: [...] }` — see [Usage](#usage).
-
-One-off scan without creating an engine:
-
-```ts
-import { scanBuffer } from "@filebouncer/core";
-
-const result = await scanBuffer(uploadBuffer, { filename: "report.pdf" });
-```
 
 ---
 
