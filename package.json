@@ -1,6 +1,6 @@
 {
   "name": "@filebouncer/core",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Lightweight Node.js library for structural validation of uploaded files.",
   "license": "MIT",
   "packageManager": "pnpm@11.1.0",
