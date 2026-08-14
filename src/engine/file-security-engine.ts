@@ -13,8 +13,7 @@ import type {
 } from "../types";
 import { computeVerdict, meetsThreshold } from "./verdict";
 
-/** Default upload size cap when `EngineConfig.maxFileSize` is omitted (50 MiB). */
-export const DEFAULT_MAX_FILE_SIZE = 50 * 1024 * 1024;
+export const DEFAULT_MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 
 export class FileSecurityEngine {
   private readonly config: EngineConfig;
