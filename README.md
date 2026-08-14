@@ -93,6 +93,8 @@ if (!result.ok) {
 }
 ```
 
+`maxFileSize` defaults to **50 MiB** when omitted. Pass a different value to raise or lower the cap.
+
 Enable stricter MIME checks with `mime: { strict: true, allowList: [...] }` — see [Usage](#usage).
 
 One-off scan without creating an engine:

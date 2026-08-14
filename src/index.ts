@@ -27,7 +27,7 @@ export type { DetectedType } from "./util/detect-type";
 
 export { detectType } from "./util/detect-type";
 
-export { FileSecurityEngine, scanBuffer } from "./engine";
+export { DEFAULT_MAX_FILE_SIZE, FileSecurityEngine, scanBuffer } from "./engine";
 
 export {
   ArchiveScanner,

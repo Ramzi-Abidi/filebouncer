@@ -200,7 +200,10 @@ export interface EngineConfig {
   scanners?: BuiltInScannerName[] | "all";
   /** User-supplied scanners, run alongside the built-ins. */
   customScanners?: Scanner[];
-  /** Hard upper bound on input size, in bytes. Larger inputs are rejected. */
+  /**
+   * Hard upper bound on input size, in bytes. Larger inputs are rejected.
+   * Defaults to 50 MiB (`50 * 1024 * 1024`) when omitted.
+   */
   maxFileSize?: number;
   /**
    * Threats with severity >= this value flip `ScanResult.ok` to `false`.

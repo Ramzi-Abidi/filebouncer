@@ -13,6 +13,9 @@ import type {
 } from "../types";
 import { computeVerdict, meetsThreshold } from "./verdict";
 
+/** Default upload size cap when `EngineConfig.maxFileSize` is omitted (50 MiB). */
+export const DEFAULT_MAX_FILE_SIZE = 50 * 1024 * 1024;
+
 export class FileSecurityEngine {
   private readonly config: EngineConfig;
   private readonly scanners: Scanner[];
@@ -35,7 +38,7 @@ export class FileSecurityEngine {
       normalized = await normalizeInput(input, {
         filename: opts?.filename,
         declaredMime: opts?.declaredMime,
-        maxBytes: this.config.maxFileSize,
+        maxBytes: this.config.maxFileSize ?? DEFAULT_MAX_FILE_SIZE,
       });
     } catch (err) {
       if (err instanceof InputTooLargeError) {

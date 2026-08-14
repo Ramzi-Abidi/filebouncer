@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { FileSecurityEngine } from "../../src/engine/file-security-engine";
+import { DEFAULT_MAX_FILE_SIZE, FileSecurityEngine } from "../../src/engine/file-security-engine";
 import type { Scanner } from "../../src/types";
 
 const EMPTY = Buffer.alloc(0);
@@ -87,5 +87,38 @@ describe("FileSecurityEngine", () => {
     expect(result.ok).toBe(true);
     expect(result.errors).toEqual([]);
     expect(result.timedOut).toBeFalsy();
+  });
+
+  it("rejects oversized input when maxFileSize is omitted (default 50 MiB)", async () => {
+    const engine = new FileSecurityEngine({ scanners: [] });
+    const result = await engine.scan(Buffer.alloc(DEFAULT_MAX_FILE_SIZE + 1), {
+      filename: "huge.bin",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.threats).toEqual([
+      expect.objectContaining({
+        scanner: "engine",
+        code: "FILE_TOO_LARGE",
+        severity: "critical",
+      }),
+    ]);
+    expect(result.threats[0]?.message).toContain(String(DEFAULT_MAX_FILE_SIZE));
+  });
+
+  it("honors an explicit maxFileSize override", async () => {
+    const engine = new FileSecurityEngine({
+      scanners: [],
+      maxFileSize: 100,
+    });
+    const blocked = await engine.scan(Buffer.alloc(101), { filename: "big.bin" });
+    const allowed = await engine.scan(Buffer.alloc(100), { filename: "ok.bin" });
+
+    expect(blocked.ok).toBe(false);
+    expect(blocked.threats).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "FILE_TOO_LARGE" })]),
+    );
+    expect(allowed.ok).toBe(true);
+    expect(allowed.threats).toEqual([]);
   });
 });
