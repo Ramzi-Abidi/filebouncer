@@ -278,4 +278,3 @@ describe("runCli", () => {
     expect(result.stdout).toContain("Result: BLOCK");
   });
 });
-
