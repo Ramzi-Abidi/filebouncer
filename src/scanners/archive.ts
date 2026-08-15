@@ -155,7 +155,7 @@ export class ArchiveScanner implements Scanner {
         return threats;
       }
 
-      throw new Error("Archive entries could not be read");
+      throw new Error("Archive entries could not be read", { cause: error });
     } finally {
       zipfile.close();
     }
