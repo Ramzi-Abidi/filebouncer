@@ -1,4 +1,5 @@
 import { resolveBuiltInScanners } from "./built-ins";
+import { ScanFailureError } from "./scan-failure-error";
 import { type RawInput, InputTooLargeError, normalizeInput } from "../input";
 import { detectType } from "../util/detect-type";
 import type {
@@ -111,7 +112,7 @@ export class FileSecurityEngine {
       } catch (err) {
         errors.push({
           scanner: scanner.name,
-          code: "SCANNER_ERROR",
+          code: err instanceof ScanFailureError ? err.code : "SCANNER_ERROR",
           message: err instanceof Error ? err.message : "Unknown scanner error",
           cause: err,
         });

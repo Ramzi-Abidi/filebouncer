@@ -238,10 +238,21 @@ describe("archive scanner", () => {
     expect(result.ok).toBe(false);
     expect(result.errors).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ scanner: "archive", code: "SCANNER_ERROR" }),
+        expect.objectContaining({ scanner: "archive", code: "CORRUPT_ARCHIVE" }),
       ]),
     );
-    expect(result.threats.find((t) => t.code === "CORRUPT_ARCHIVE")).toBeUndefined();
+  });
+
+  it("blocks empty archives", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const result = await engine.scan(Buffer.alloc(0), { filename: "empty.zip" });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ scanner: "archive", code: "CORRUPT_ARCHIVE" }),
+      ]),
+    );
   });
 
   it("skips non-archive files", async () => {

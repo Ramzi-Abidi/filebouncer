@@ -1,5 +1,6 @@
 import { fromBufferPromise } from "yauzl";
 
+import { ScanFailureError } from "../engine/scan-failure-error";
 import type { ArchiveConfig, Scanner, ScannerContext, Severity, Threat } from "../types";
 
 const ARCHIVE_EXTENSIONS = ["zip", "jar", "apk"];
@@ -53,14 +54,16 @@ export class ArchiveScanner implements Scanner {
     const threats: Threat[] = [];
     const buffer = await ctx.read();
     if (buffer.length === 0) {
-      throw new Error("Archive is empty");
+      throw new ScanFailureError("CORRUPT_ARCHIVE", "Archive is empty");
     }
 
     let zipfile;
     try {
       zipfile = await fromBufferPromise(buffer, { lazyEntries: true, decodeStrings: false });
-    } catch {
-      throw new Error("Archive could not be parsed as a valid ZIP");
+    } catch (err) {
+      throw new ScanFailureError("CORRUPT_ARCHIVE", "Archive could not be parsed as a valid ZIP", {
+        cause: err,
+      });
     }
 
     let entryCount = 0;
@@ -155,7 +158,9 @@ export class ArchiveScanner implements Scanner {
         return threats;
       }
 
-      throw new Error("Archive entries could not be read", { cause: error });
+      throw new ScanFailureError("CORRUPT_ARCHIVE", "Archive entries could not be read", {
+        cause: error,
+      });
     } finally {
       zipfile.close();
     }
