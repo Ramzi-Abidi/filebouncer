@@ -1,5 +1,5 @@
-import { realpathSync } from "node:fs";
-import { access } from "node:fs/promises";
+import { realpathSync, type Stats } from "node:fs";
+import { stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { basename, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -130,10 +130,15 @@ export const runCli = async (
   }
 
   const filePath = resolve(opts.file);
+  let stats: Stats;
   try {
-    await access(filePath);
+    stats = await stat(filePath);
   } catch {
     io.error(`File not found: ${filePath}`);
+    return 2;
+  }
+  if (!stats.isFile()) {
+    io.error(`Not a file: ${filePath}`);
     return 2;
   }
 
