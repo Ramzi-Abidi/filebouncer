@@ -161,6 +161,16 @@ describe("runCli", () => {
     expect(code).toBe(2);
   });
 
+  it("returns 2 when given a directory path", async () => {
+    const errors: string[] = [];
+    const code = await runCli([tmpdir()], {
+      log: () => undefined,
+      error: (msg) => errors.push(msg),
+    });
+    expect(code).toBe(2);
+    expect(errors.join("\n")).toContain("Not a file");
+  });
+
   it("runs when invoked through a bin-style symlink to dist/cli.js", async () => {
     const cliJs = resolve("dist/cli.js");
     if (!existsSync(cliJs)) {
