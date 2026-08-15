@@ -162,8 +162,9 @@ describe("runCli", () => {
   });
 
   it("returns 2 when given a directory path", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "fb-cli-dir-"));
     const errors: string[] = [];
-    const code = await runCli([tmpdir()], {
+    const code = await runCli([dir], {
       log: () => undefined,
       error: (msg) => errors.push(msg),
     });
