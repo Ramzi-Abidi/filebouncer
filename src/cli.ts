@@ -1,4 +1,4 @@
-import { realpathSync } from "node:fs";
+import { realpathSync, type Stats } from "node:fs";
 import { stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { basename, resolve } from "node:path";
@@ -130,7 +130,7 @@ export const runCli = async (
   }
 
   const filePath = resolve(opts.file);
-  let stats;
+  let stats: Stats;
   try {
     stats = await stat(filePath);
   } catch {
