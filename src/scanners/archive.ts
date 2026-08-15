@@ -53,23 +53,14 @@ export class ArchiveScanner implements Scanner {
     const threats: Threat[] = [];
     const buffer = await ctx.read();
     if (buffer.length === 0) {
-      threats.push(this.makeThreat("CORRUPT_ARCHIVE", "medium", "Archive is empty", undefined));
-      return threats;
+      throw new Error("Archive is empty");
     }
 
     let zipfile;
     try {
       zipfile = await fromBufferPromise(buffer, { lazyEntries: true, decodeStrings: false });
     } catch {
-      threats.push(
-        this.makeThreat(
-          "CORRUPT_ARCHIVE",
-          "medium",
-          "Archive could not be parsed as a valid ZIP",
-          undefined,
-        ),
-      );
-      return threats;
+      throw new Error("Archive could not be parsed as a valid ZIP");
     }
 
     let entryCount = 0;
@@ -164,14 +155,7 @@ export class ArchiveScanner implements Scanner {
         return threats;
       }
 
-      threats.push(
-        this.makeThreat(
-          "CORRUPT_ARCHIVE",
-          "medium",
-          "Archive entries could not be read",
-          undefined,
-        ),
-      );
+      throw new Error("Archive entries could not be read");
     } finally {
       zipfile.close();
     }
