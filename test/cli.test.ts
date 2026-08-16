@@ -7,7 +7,7 @@ import { crc32 } from "node:zlib";
 
 import { describe, expect, it } from "vitest";
 
-import { formatHelp, formatHuman, parseArgs, runCli } from "../src/cli";
+import { formatHelp, formatHuman, formatJson, parseArgs, runCli } from "../src/cli";
 import type { ScanResult } from "../src/types";
 
 function createMinimalJpeg(): Buffer {
@@ -106,6 +106,74 @@ describe("CLI helpers", () => {
     expect(text).toContain("Result: BLOCK");
   });
 
+  it("formats JSON safely when errors contains an Error cause", () => {
+    const result = {
+      ok: false,
+      verdict: "clean",
+      size: 100,
+      threats: [],
+      errors: [
+        {
+          scanner: "archive",
+          code: "SCANNER_ERROR",
+          message: "Corrupt zip",
+          cause: new Error("corrupt central directory header"),
+        },
+        {
+          scanner: "custom",
+          code: "ANONYMOUS_ERROR",
+          message: "Empty error",
+          cause: new Error(),
+        },
+      ],
+      scannersRun: ["archive", "custom"],
+      scannersSkipped: [],
+      durationMs: 5,
+    } satisfies ScanResult;
+
+    const json = formatJson(result);
+    const parsed = JSON.parse(json) as ScanResult;
+
+    expect(parsed.ok).toBe(false);
+    expect(parsed.errors[0]?.cause).toBe("corrupt central directory header");
+    expect(parsed.errors[1]?.cause).toBe("Error");
+  });
+
+  it("formats JSON safely with non-Error causes and circular structures", () => {
+    const circularObj: Record<string, unknown> = { key: "value" };
+    circularObj.self = circularObj;
+
+    const result = {
+      ok: false,
+      verdict: "clean",
+      size: 100,
+      threats: [],
+      errors: [
+        {
+          scanner: "custom",
+          code: "STRING_CAUSE",
+          message: "String cause",
+          cause: "already a string",
+        },
+        {
+          scanner: "custom",
+          code: "CIRCULAR_CAUSE",
+          message: "Circular cause",
+          cause: circularObj,
+        },
+      ],
+      scannersRun: ["custom"],
+      scannersSkipped: [],
+      durationMs: 5,
+    } satisfies ScanResult;
+
+    const json = formatJson(result);
+    const parsed = JSON.parse(json) as { errors: { cause: unknown }[] };
+
+    expect(parsed.errors[0]?.cause).toBe("already a string");
+    expect(parsed.errors[1]?.cause).toEqual({ key: "value", self: "[Circular]" });
+  });
+
   it("includes usage text in help", () => {
     expect(formatHelp()).toContain("Usage: filebouncer");
   });
@@ -170,6 +238,25 @@ describe("runCli", () => {
     });
     expect(code).toBe(2);
     expect(errors.join("\n")).toContain("Not a file");
+  });
+
+  it("emits valid JSON with --json flag", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "fb-cli-json-"));
+    const file = join(dir, "photo.jpg");
+    await writeFile(file, createMinimalJpeg());
+
+    const logs: string[] = [];
+    const code = await runCli([file, "--json"], {
+      log: (msg) => logs.push(msg),
+      error: (msg) => logs.push(msg),
+    });
+
+    expect(code).toBe(0);
+    const parsed = JSON.parse(logs[0]!) as ScanResult;
+    expect(parsed.ok).toBe(true);
+    expect(parsed.detectedMime).toBe("image/jpeg");
+    expect(parsed.threats).toEqual([]);
+    expect(parsed.errors).toEqual([]);
   });
 
   it("runs when invoked through a bin-style symlink to dist/cli.js", async () => {

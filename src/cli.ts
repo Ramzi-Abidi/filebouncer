@@ -54,6 +54,29 @@ export const formatHelp = (): string =>
     "  3  usage error",
   ].join("\n");
 
+export const formatJson = (result: ScanResult): string => {
+  const seen = new WeakSet();
+  return JSON.stringify(
+    result,
+    (_key, value: unknown) => {
+      if (value instanceof Error) {
+        return value.message || value.name || String(value);
+      }
+      if (typeof value === "bigint") {
+        return value.toString();
+      }
+      if (typeof value === "object" && value !== null) {
+        if (seen.has(value)) {
+          return "[Circular]";
+        }
+        seen.add(value);
+      }
+      return value;
+    },
+    2,
+  );
+};
+
 export const formatHuman = (result: ScanResult, version: string, fileLabel: string): string => {
   const lines: string[] = [
     `filebouncer v${version}`,
@@ -146,7 +169,7 @@ export const runCli = async (
   const result = await engine.scan({ path: filePath }, { filename: basename(filePath) });
 
   if (opts.json) {
-    io.log(JSON.stringify(result, null, 2));
+    io.log(formatJson(result));
   } else {
     io.log(formatHuman(result, readVersion(), basename(filePath)));
   }
