@@ -231,13 +231,26 @@ describe("archive scanner", () => {
     expect(result.threats.find((t) => t.code === "LINK_ENTRY")).toBeUndefined();
   });
 
-  it("flags corrupt archives", async () => {
+  it("blocks corrupt archives", async () => {
     const engine = new FileSecurityEngine({ scanners: ["archive"] });
     const result = await engine.scan(Buffer.from("not-a-zip"), { filename: "broken.zip" });
 
-    expect(result.threats).toEqual(
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "CORRUPT_ARCHIVE", scanner: "archive" }),
+        expect.objectContaining({ scanner: "archive", code: "CORRUPT_ARCHIVE" }),
+      ]),
+    );
+  });
+
+  it("blocks empty archives", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const result = await engine.scan(Buffer.alloc(0), { filename: "empty.zip" });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ scanner: "archive", code: "CORRUPT_ARCHIVE" }),
       ]),
     );
   });
