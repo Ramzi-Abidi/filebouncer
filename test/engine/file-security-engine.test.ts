@@ -161,7 +161,16 @@ describe("FileSecurityEngine", () => {
     }).scan(EMPTY, { filename: "report.pdf" });
 
     expect(mediumResult.ok).toBe(true);
+    expect(mediumResult.verdict).toBe("suspicious");
+    expect(mediumResult.threats).toEqual([
+      expect.objectContaining({
+        code: "MEDIUM_THREAT",
+        severity: "medium",
+      }),
+    ]);
+
     expect(highResult.ok).toBe(false);
+    expect(highResult.verdict).toBe("malicious");
   });
 
   it("honors a custom blockThreshold", async () => {
