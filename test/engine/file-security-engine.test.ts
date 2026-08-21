@@ -43,6 +43,7 @@ describe("FileSecurityEngine", () => {
         return [];
       },
     };
+
     const next: Scanner = {
       name: "next",
       appliesTo: () => true,
@@ -120,5 +121,145 @@ describe("FileSecurityEngine", () => {
     );
     expect(allowed.ok).toBe(true);
     expect(allowed.threats).toEqual([]);
+  });
+
+  it("uses high as the default blockThreshold", async () => {
+    const medium: Scanner = {
+      name: "medium",
+      appliesTo: () => true,
+      scan: async () => [
+        {
+          scanner: "medium",
+          code: "MEDIUM_THREAT",
+          severity: "medium",
+          message: "medium threat",
+        },
+      ],
+    };
+
+    const high: Scanner = {
+      name: "high",
+      appliesTo: () => true,
+      scan: async () => [
+        {
+          scanner: "high",
+          code: "HIGH_THREAT",
+          severity: "high",
+          message: "high threat",
+        },
+      ],
+    };
+
+    const mediumResult = await new FileSecurityEngine({
+      scanners: [],
+      customScanners: [medium],
+    }).scan(EMPTY, { filename: "report.pdf" });
+
+    const highResult = await new FileSecurityEngine({
+      scanners: [],
+      customScanners: [high],
+    }).scan(EMPTY, { filename: "report.pdf" });
+
+    expect(mediumResult.ok).toBe(true);
+    expect(mediumResult.verdict).toBe("suspicious");
+    expect(mediumResult.threats).toEqual([
+      expect.objectContaining({
+        code: "MEDIUM_THREAT",
+        severity: "medium",
+      }),
+    ]);
+
+    expect(highResult.ok).toBe(false);
+    expect(highResult.verdict).toBe("malicious");
+  });
+
+  it("honors a custom blockThreshold", async () => {
+    const medium: Scanner = {
+      name: "medium",
+      appliesTo: () => true,
+      scan: async () => [
+        {
+          scanner: "medium",
+          code: "MEDIUM_THREAT",
+          severity: "medium",
+          message: "medium threat",
+        },
+      ],
+    };
+
+    const result = await new FileSecurityEngine({
+      scanners: [],
+      blockThreshold: "medium",
+      customScanners: [medium],
+    }).scan(EMPTY, { filename: "report.pdf" });
+
+    expect(result.ok).toBe(false);
+  });
+
+  it("skips later scanners on critical findings when failFast is enabled", async () => {
+    const critical: Scanner = {
+      name: "critical",
+      appliesTo: () => true,
+      scan: async () => [
+        {
+          scanner: "critical",
+          code: "CRITICAL_THREAT",
+          severity: "critical",
+          message: "critical threat",
+        },
+      ],
+    };
+
+    const next: Scanner = {
+      name: "next",
+      appliesTo: () => true,
+      scan: async () => [],
+    };
+
+    const result = await new FileSecurityEngine({
+      scanners: [],
+      failFast: true,
+      customScanners: [critical, next],
+    }).scan(EMPTY, { filename: "report.pdf" });
+
+    expect(result.ok).toBe(false);
+    expect(result.scannersRun).toEqual(["critical"]);
+    expect(result.scannersSkipped).toEqual([
+      expect.objectContaining({
+        name: "next",
+        reason: "fail-fast",
+      }),
+    ]);
+  });
+
+  it("continues after high findings when failFast is enabled", async () => {
+    const high: Scanner = {
+      name: "high",
+      appliesTo: () => true,
+      scan: async () => [
+        {
+          scanner: "high",
+          code: "HIGH_THREAT",
+          severity: "high",
+          message: "high threat",
+        },
+      ],
+    };
+
+    const next: Scanner = {
+      name: "next",
+      appliesTo: () => true,
+      scan: async () => [],
+    };
+
+    const result = await new FileSecurityEngine({
+      scanners: [],
+      failFast: true,
+      customScanners: [high, next],
+    }).scan(EMPTY, { filename: "report.pdf" });
+
+    expect(result.ok).toBe(false);
+    expect(result.scannersRun).toEqual(["high", "next"]);
+    expect(result.scannersSkipped).toEqual([]);
   });
 });
