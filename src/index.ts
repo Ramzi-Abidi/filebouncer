@@ -18,6 +18,7 @@ export type {
 } from "./types";
 
 export { FileBouncerError } from "./types";
+export { ScanFailureError } from "./engine/scan-failure-error";
 
 export type { NormalizeOptions, NormalizedInput, RawInput } from "./input";
 
