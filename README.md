@@ -10,7 +10,7 @@ catch suspicious uploads before they reach your app
 
 **Detect files that aren't what they claim to be.**
 
-filebouncer inspects untrusted files for structural and metadata-based threats before your application processes them — including MIME mismatches, unsafe archives, risky spreadsheet cells, and polyglot files.
+filebouncer inspects untrusted files for structural and metadata-based threats before your application processes them — including MIME mismatches, unsafe archives, risky CSV/TSV cells, and polyglot files.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](package.json)
@@ -171,16 +171,16 @@ Results follow a clear model:
 
 ## What it checks
 
-| Area                        | Description                                                      |
-| --------------------------- | ---------------------------------------------------------------- |
-| **Unsafe archive paths**    | Entry names that leave the extract directory                     |
-| **Archive size limits**     | Too many entries, huge uncompressed size, extreme ratios         |
-| **Encrypted ZIP entries**   | Password-protected payloads that cannot be inspected             |
-| **MIME mismatches**         | Extension or declared MIME disagrees with file signature         |
-| **Risky spreadsheet cells** | Cells that start with characters office apps may treat specially |
-| **Unsafe archive entries**  | Absolute paths, link entries, suspicious names                   |
-| **Metadata anomalies**      | Double extensions, executable extensions on “documents”          |
-| **Polyglot files**          | One buffer that looks like more than one format (e.g. image+ZIP) |
+| Area                       | Description                                                      |
+| -------------------------- | ---------------------------------------------------------------- |
+| **Unsafe archive paths**   | Entry names that leave the extract directory                     |
+| **Archive size limits**    | Too many entries, huge uncompressed size, extreme ratios         |
+| **Encrypted ZIP entries**  | Password-protected payloads that cannot be inspected             |
+| **MIME mismatches**        | Extension or declared MIME disagrees with file signature         |
+| **Risky CSV/TSV cells**    | Cells that start with characters office apps may treat specially |
+| **Unsafe archive entries** | Absolute paths, link entries, suspicious names                   |
+| **Metadata anomalies**     | Double extensions, executable extensions on “documents”          |
+| **Polyglot files**         | One buffer that looks like more than one format (e.g. image+ZIP) |
 
 ### What it does **not** detect
 

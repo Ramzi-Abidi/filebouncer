@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_MAX_FILE_SIZE, FileSecurityEngine } from "../../src/engine/file-security-engine";
+import { DEFAULT_MAX_FILE_SIZE, FileSecurityEngine, ScanFailureError } from "../../src";
 import type { Scanner } from "../../src/types";
 
 const EMPTY = Buffer.alloc(0);
@@ -29,6 +29,34 @@ describe("FileSecurityEngine", () => {
           scanner: "throw error",
           code: "SCANNER_ERROR",
           message: "throw error",
+        }),
+      ]),
+    );
+  });
+
+  it("maps ScanFailureError to the provided error code", async () => {
+    const scannerFails: Scanner = {
+      name: "fail closed",
+      appliesTo: () => true,
+      scan: async () => {
+        throw new ScanFailureError("CORRUPT_INPUT", "cannot parse");
+      },
+    };
+
+    const engine = new FileSecurityEngine({
+      scanners: [],
+      customScanners: [scannerFails],
+    });
+    const result = await engine.scan(EMPTY, { filename: "report.pdf" });
+
+    expect(result.ok).toBe(false);
+    expect(result.threats).toEqual([]);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          scanner: "fail closed",
+          code: "CORRUPT_INPUT",
+          message: "cannot parse",
         }),
       ]),
     );
