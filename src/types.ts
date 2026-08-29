@@ -196,7 +196,11 @@ export interface PolyglotConfig {
 }
 
 export interface EngineConfig {
-  /** Built-in scanners to enable. `"all"` enables every shipped scanner. */
+  /**
+   * Built-in scanners to enable. `"all"` enables every shipped scanner.
+   * Defaults to `"all"` when omitted. Pass `[]` to disable built-ins
+   * (for example to run only `customScanners`).
+   */
   scanners?: BuiltInScannerName[] | "all";
   /** User-supplied scanners, run alongside the built-ins. */
   customScanners?: Scanner[];
