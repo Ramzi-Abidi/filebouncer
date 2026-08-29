@@ -78,10 +78,7 @@ npm install @filebouncer/core
 ```ts
 import { FileSecurityEngine } from "@filebouncer/core";
 
-const engine = new FileSecurityEngine({
-  scanners: ["mime", "metadata", "csv", "archive", "polyglot"],
-  maxFileSize: 50 * 1024 * 1024,
-});
+const engine = new FileSecurityEngine();
 
 const result = await engine.scan(uploadBuffer, {
   filename: "report.pdf",
@@ -93,7 +90,7 @@ if (!result.ok) {
 }
 ```
 
-`maxFileSize` defaults to **50 MiB** when omitted. Pass a different value to raise or lower the cap.
+Omitted `scanners` defaults to **`"all"`** (MIME, metadata, CSV, archive, polyglot). Pass `scanners: []` to disable built-ins. `maxFileSize` defaults to **50 MiB**.
 
 Enable stricter MIME checks with `mime: { strict: true, allowList: [...] }` — see [Usage](#usage).
 
@@ -103,6 +100,7 @@ One-off scan without creating an engine:
 import { scanBuffer } from "@filebouncer/core";
 
 const result = await scanBuffer(uploadBuffer, { filename: "report.pdf" });
+// same default: all built-in scanners
 ```
 
 ---
@@ -260,6 +258,8 @@ const noEmptyScanner: Scanner = {
 const engine = new FileSecurityEngine({ customScanners: [noEmptyScanner] });
 const result = await engine.scan(buffer, { filename: "file.txt" });
 ```
+
+Omitted `scanners` still runs every built-in. Pass `scanners: []` to run only custom scanners.
 
 ### Advanced — low-level API
 

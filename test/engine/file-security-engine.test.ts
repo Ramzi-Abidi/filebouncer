@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_MAX_FILE_SIZE, FileSecurityEngine, ScanFailureError } from "../../src";
+import { DEFAULT_MAX_FILE_SIZE, FileSecurityEngine, ScanFailureError, scanBuffer } from "../../src";
 import type { Scanner } from "../../src/types";
+
+const BUILT_IN_SCANNERS = ["mime", "metadata", "csv", "archive", "polyglot"];
+
+const consideredScanners = (result: {
+  scannersRun: string[];
+  scannersSkipped: { name: string }[];
+}) => [...result.scannersRun, ...result.scannersSkipped.map((s) => s.name)].sort();
 
 const EMPTY = Buffer.alloc(0);
 
@@ -288,6 +295,43 @@ describe("FileSecurityEngine", () => {
 
     expect(result.ok).toBe(false);
     expect(result.scannersRun).toEqual(["high", "next"]);
+    expect(result.scannersSkipped).toEqual([]);
+  });
+
+  it("enables every built-in scanner when config is omitted", async () => {
+    const result = await new FileSecurityEngine().scan(EMPTY, { filename: "report.pdf" });
+
+    expect(consideredScanners(result)).toEqual([...BUILT_IN_SCANNERS].sort());
+  });
+
+  it("enables every built-in scanner from scanBuffer with no config", async () => {
+    const result = await scanBuffer(EMPTY, { filename: "report.pdf" });
+
+    expect(consideredScanners(result)).toEqual([...BUILT_IN_SCANNERS].sort());
+  });
+
+  it("still honors scanners: all", async () => {
+    const result = await new FileSecurityEngine({ scanners: "all" }).scan(EMPTY, {
+      filename: "report.pdf",
+    });
+
+    expect(consideredScanners(result)).toEqual([...BUILT_IN_SCANNERS].sort());
+  });
+
+  it("still honors an explicit scanner list", async () => {
+    const result = await new FileSecurityEngine({ scanners: ["mime"] }).scan(EMPTY, {
+      filename: "report.pdf",
+    });
+
+    expect(consideredScanners(result)).toEqual(["mime"]);
+  });
+
+  it("disables built-in scanners when scanners is an empty array", async () => {
+    const result = await new FileSecurityEngine({ scanners: [] }).scan(EMPTY, {
+      filename: "report.pdf",
+    });
+
+    expect(result.scannersRun).toEqual([]);
     expect(result.scannersSkipped).toEqual([]);
   });
 });

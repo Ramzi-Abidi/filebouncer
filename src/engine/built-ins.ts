@@ -6,8 +6,8 @@ import { PolyglotScanner } from "../scanners/polyglot";
 import type { EngineConfig, Scanner } from "../types";
 
 export const resolveBuiltInScanners = (config: EngineConfig): Scanner[] => {
-  const selected = config.scanners;
-  if (!selected) return [];
+  const selected = config.scanners ?? "all";
+  if (selected !== "all" && selected.length === 0) return [];
 
   const scanners: Scanner[] = [];
 
