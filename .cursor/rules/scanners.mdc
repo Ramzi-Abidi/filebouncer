@@ -1,0 +1,14 @@
+---
+description: How to add or change a built-in scanner
+globs: src/scanners/**/*.ts,test/scanners/**/*.ts
+alwaysApply: false
+---
+
+# Scanners
+
+- Class implementing `Scanner` (`name`, `appliesTo`, `scan`).
+- Wire in `src/engine/built-ins.ts`. Export from `src/scanners/index.ts` and `src/index.ts`.
+- Config goes on `EngineConfig` in `src/types.ts`.
+- Tests in `test/scanners/<name>.test.ts`. Generate samples in the test (see polyglot/archive tests).
+- Fail closed with `throw new ScanFailureError(code, message)` when the file cannot be inspected (e.g. corrupt ZIP).
+- Update README “What it checks” when shipping a new scanner.
