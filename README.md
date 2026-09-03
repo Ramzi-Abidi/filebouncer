@@ -171,14 +171,30 @@ Results follow a clear model:
 
 | Area                       | Description                                                      |
 | -------------------------- | ---------------------------------------------------------------- |
-| **Unsafe archive paths**   | Entry names that leave the extract directory                     |
-| **Archive size limits**    | Too many entries, huge uncompressed size, extreme ratios         |
-| **Encrypted ZIP entries**  | Password-protected payloads that cannot be inspected             |
+| **Unsafe archive paths**   | ZIP entry names that leave the extract directory                 |
+| **Archive size limits**    | Too many ZIP entries, huge uncompressed size, extreme ratios     |
+| **Encrypted ZIP entries**  | Password-protected ZIP payloads that cannot be inspected         |
 | **MIME mismatches**        | Extension or declared MIME disagrees with file signature         |
 | **Risky CSV/TSV cells**    | Cells that start with characters office apps may treat specially |
-| **Unsafe archive entries** | Absolute paths, link entries, suspicious names                   |
+| **Unsafe archive entries** | Absolute paths, link entries, suspicious names in ZIP            |
 | **Metadata anomalies**     | Double extensions, executable extensions on “documents”          |
 | **Polyglot files**         | One buffer that looks like more than one format (e.g. image+ZIP) |
+
+### Archive formats
+
+Entry inspection (paths, bombs, encryption, links) applies only to ZIP-family containers parsed with [`yauzl`](https://github.com/thejoshwolfe/yauzl):
+
+| Format | Entry inspection | Notes |
+| ------ | ---------------- | ----- |
+| ZIP | Yes | Paths, size/ratio limits, encryption, symlinks |
+| JAR, APK | Yes | Treated as ZIP (`.jar` / `.apk` or ZIP MIME) |
+| Office ZIP (`docx`, `xlsx`, `pptx`) | No | Detected as office documents, not opened as ZIP |
+| tar, tar.gz, tgz | No | Not parsed ([#29](https://github.com/Ramzi-Abidi/fileBouncer/issues/29)) |
+| 7z | No | Not parsed ([#30](https://github.com/Ramzi-Abidi/fileBouncer/issues/30)) |
+| RAR | No | Not parsed ([#31](https://github.com/Ramzi-Abidi/fileBouncer/issues/31)) |
+| Nested ZIP | No | `archive.maxDepth` is stored but unused |
+
+A non-ZIP file named `.zip` is still handed to the ZIP parser and **fails closed** (`CORRUPT_ARCHIVE`). A `.tar` is not opened by the archive scanner; MIME / metadata / polyglot may still run.
 
 ### What it does **not** detect
 
@@ -371,10 +387,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and PR guidelines.
 - [x] MIME scanner
 - [x] Metadata scanner
 - [x] CSV scanner
-- [x] Archive scanner
+- [x] Archive scanner (ZIP / JAR / APK)
 - [x] First npm release
 - [x] Polyglot scanner
 - [x] CLI (`filebouncer` / `npx @filebouncer/core`)
+- [ ] tar / tar.gz / tgz archive scanning
+- [ ] 7z archive scanning
+- [ ] RAR archive scanning
 - [ ] Express & Fastify middleware
 - [ ] Stable `v1.0.0` API
 
