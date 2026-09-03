@@ -184,15 +184,15 @@ Results follow a clear model:
 
 Entry inspection (paths, bombs, encryption, links) applies only to ZIP-family containers parsed with [`yauzl`](https://github.com/thejoshwolfe/yauzl):
 
-| Format | Entry inspection | Notes |
-| ------ | ---------------- | ----- |
-| ZIP | Yes | Paths, size/ratio limits, encryption, symlinks |
-| JAR, APK | Yes | Treated as ZIP (`.jar` / `.apk` or ZIP MIME) |
-| Office ZIP (`docx`, `xlsx`, `pptx`) | No | Detected as office documents, not opened as ZIP |
-| tar, tar.gz, tgz | No | Not parsed ([#29](https://github.com/Ramzi-Abidi/fileBouncer/issues/29)) |
-| 7z | No | Not parsed ([#30](https://github.com/Ramzi-Abidi/fileBouncer/issues/30)) |
-| RAR | No | Not parsed ([#31](https://github.com/Ramzi-Abidi/fileBouncer/issues/31)) |
-| Nested ZIP | No | `archive.maxDepth` is stored but unused |
+| Format                              | Entry inspection | Notes                                                                    |
+| ----------------------------------- | ---------------- | ------------------------------------------------------------------------ |
+| ZIP                                 | Yes              | Paths, size/ratio limits, encryption, symlinks                           |
+| JAR, APK                            | Yes              | Treated as ZIP (`.jar` / `.apk` or ZIP MIME)                             |
+| Office ZIP (`docx`, `xlsx`, `pptx`) | No               | Detected as office documents, not opened as ZIP                          |
+| tar, tar.gz, tgz                    | No               | Not parsed ([#29](https://github.com/Ramzi-Abidi/fileBouncer/issues/29)) |
+| 7z                                  | No               | Not parsed ([#30](https://github.com/Ramzi-Abidi/fileBouncer/issues/30)) |
+| RAR                                 | No               | Not parsed ([#31](https://github.com/Ramzi-Abidi/fileBouncer/issues/31)) |
+| Nested ZIP                          | No               | `archive.maxDepth` is stored but unused                                  |
 
 A non-ZIP file named `.zip` is still handed to the ZIP parser and **fails closed** (`CORRUPT_ARCHIVE`). A `.tar` is not opened by the archive scanner; MIME / metadata / polyglot may still run.
 
