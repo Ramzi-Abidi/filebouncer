@@ -1,0 +1,16 @@
+---
+description: filebouncer product and engine contracts
+alwaysApply: true
+---
+
+# filebouncer
+
+Structural / metadata upload checks only. Not antivirus. Do not add malware signatures or ask for malware samples.
+
+- Node ≥ 20, ESM, pnpm. Verify with `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`.
+- Threat = finding. `ScanFailureError` = could not finish looking (`result.errors`). `FileBouncerError` = programmer mistake (throws).
+- Omitted `scanners` defaults to `"all"`. `scanners: []` disables built-ins (use this to isolate `customScanners` in tests).
+- Default `blockThreshold` is `"high"`. `failFast` stops only after `critical`, not `high`.
+- `timeoutMs` is a soft budget between scanners; it does not cancel an in-flight `scan()`.
+- Public API is `src/index.ts`. Do not expand it without an export + test.
+- Follow CONTRIBUTING.md. Prefer generated buffers in tests; no committed malware.
