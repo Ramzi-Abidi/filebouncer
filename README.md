@@ -44,6 +44,7 @@ Findings:
   high     POLYGLOT_DETECTED
            File appears to match more than one format (image/jpeg and application/zip @ 38115)
 
+Verdict: malicious
 Result: BLOCK
 ```
 
@@ -58,6 +59,7 @@ Detected MIME: image/jpeg
 
 Findings: (none)
 
+Verdict: clean
 Result: OK
 ```
 
