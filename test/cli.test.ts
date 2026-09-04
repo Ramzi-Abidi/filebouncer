@@ -103,6 +103,60 @@ describe("CLI helpers", () => {
     const text = formatHuman(result, "0.5.0", "polyglot.jpg");
     expect(text).toContain("filebouncer v0.5.0");
     expect(text).toContain("POLYGLOT_DETECTED");
+    expect(text).toContain("Verdict: malicious");
+    expect(text).toContain("Result: BLOCK");
+    expect(text).not.toContain("Timed out");
+  });
+
+  it("formats human output for a suspicious result that does not block", () => {
+    const result = {
+      ok: true,
+      verdict: "suspicious",
+      size: 100,
+      detectedMime: "text/plain",
+      threats: [
+        {
+          scanner: "csv",
+          code: "UNSAFE_CELL",
+          severity: "medium",
+          message: "formula prefix",
+        },
+      ],
+      errors: [],
+      scannersRun: ["csv"],
+      scannersSkipped: [],
+      durationMs: 1,
+    } satisfies ScanResult;
+
+    const text = formatHuman(result, "0.5.0", "sheet.csv");
+    expect(text).toContain("Verdict: suspicious");
+    expect(text).toContain("Result: OK");
+    expect(text).not.toContain("Timed out");
+  });
+
+  it("formats human output when the scan timed out", () => {
+    const result = {
+      ok: false,
+      verdict: "clean",
+      size: 100,
+      detectedMime: "image/jpeg",
+      threats: [],
+      errors: [
+        {
+          scanner: "engine",
+          code: "SCAN_TIMEOUT",
+          message: "Scan budget of 5ms exceeded",
+        },
+      ],
+      scannersRun: ["slow"],
+      scannersSkipped: [{ name: "next", reason: "timeout" }],
+      durationMs: 8,
+      timedOut: true,
+    } satisfies ScanResult;
+
+    const text = formatHuman(result, "0.5.0", "photo.jpg");
+    expect(text).toContain("Verdict: clean");
+    expect(text).toContain("Timed out: yes");
     expect(text).toContain("Result: BLOCK");
   });
 
