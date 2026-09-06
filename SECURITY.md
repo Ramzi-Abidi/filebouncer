@@ -6,10 +6,10 @@ filebouncer is **not antivirus**. It performs structural and metadata checks on 
 
 Only the latest published `@filebouncer/core` release is supported.
 
-| Version | Supported |
-| ------- | --------- |
-| 0.6.x (latest on npm) | Yes |
-| < 0.6.5 | No |
+| Version               | Supported |
+| --------------------- | --------- |
+| 0.6.x (latest on npm) | Yes       |
+| < 0.6.5               | No        |
 
 ## What to report privately
 
