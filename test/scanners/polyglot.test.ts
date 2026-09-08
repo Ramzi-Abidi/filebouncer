@@ -80,9 +80,7 @@ const ZIP_CONTAINER_CASES = [
     name: "XLSX",
     filename: "spreadsheet.xlsx",
     detectedMime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    buffer: createOpenXmlZip(
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ),
+    buffer: createOpenXmlZip("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
   },
   {
     name: "PPTX",
