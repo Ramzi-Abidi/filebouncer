@@ -5,6 +5,37 @@ const DEFAULT_TRAILING_TOLERANCE = 32;
 const ZIP_EOCD_WINDOW = 22 + 65_535;
 
 const ZIP_FAMILIES = new Set(["zip"]);
+const ZIP_CONTAINER_EXTENSIONS = new Set([
+  "zip",
+  "jar",
+  "apk",
+  "xpi",
+  "epub",
+  "docx",
+  "docm",
+  "dotx",
+  "dotm",
+  "xlsx",
+  "xlsm",
+  "xltx",
+  "xltm",
+  "pptx",
+  "pptm",
+  "ppsx",
+  "ppsm",
+  "potx",
+  "potm",
+  "odt",
+  "ott",
+  "ods",
+  "ots",
+  "odp",
+  "otp",
+  "odg",
+  "otg",
+  "vsdx",
+  "3mf",
+]);
 
 interface FormatHit {
   family: string;
@@ -143,7 +174,10 @@ export class PolyglotScanner implements Scanner {
 
   private resolvePrimary(ctx: ScannerContext, buffer: Buffer): FormatHit | undefined {
     if (ctx.detectedMime) {
-      const family = MIME_TO_FAMILY[ctx.detectedMime] ?? ctx.detectedMime;
+      const family =
+        ctx.detectedExt && ZIP_CONTAINER_EXTENSIONS.has(ctx.detectedExt)
+          ? "zip"
+          : (MIME_TO_FAMILY[ctx.detectedMime] ?? ctx.detectedMime);
       return makeHit(family, ctx.detectedMime, 0, "detected-mime");
     }
 
