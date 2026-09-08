@@ -55,6 +55,61 @@ function createRawZip(fileName: string, data: Buffer = Buffer.from("x")): Buffer
   return Buffer.concat([localHeader, name, data, centralHeader, name, end]);
 }
 
+function createOpenXmlZip(mime: string): Buffer {
+  const contentTypes = Buffer.from(
+    `<Types><Override ContentType="${mime}.main+xml"/></Types>`,
+    "utf8",
+  );
+  return createRawZip("[Content_Types].xml", contentTypes);
+}
+
+function createMimeZip(mime: string): Buffer {
+  return createRawZip("mimetype", Buffer.from(mime, "utf8"));
+}
+
+const ZIP_CONTAINER_CASES = [
+  {
+    name: "DOCX",
+    filename: "document.docx",
+    detectedMime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    buffer: createOpenXmlZip(
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ),
+  },
+  {
+    name: "XLSX",
+    filename: "spreadsheet.xlsx",
+    detectedMime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: createOpenXmlZip("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+  },
+  {
+    name: "PPTX",
+    filename: "presentation.pptx",
+    detectedMime: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    buffer: createOpenXmlZip(
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ),
+  },
+  {
+    name: "EPUB",
+    filename: "book.epub",
+    detectedMime: "application/epub+zip",
+    buffer: createMimeZip("application/epub+zip"),
+  },
+  {
+    name: "OpenDocument",
+    filename: "document.odt",
+    detectedMime: "application/vnd.oasis.opendocument.text",
+    buffer: createMimeZip("application/vnd.oasis.opendocument.text"),
+  },
+  {
+    name: "APK",
+    filename: "application.apk",
+    detectedMime: "application/vnd.android.package-archive",
+    buffer: createRawZip("classes.dex"),
+  },
+];
+
 /** Tiny JPEG: SOI + APP0/JFIF stub + EOI. */
 function createMinimalJpeg(): Buffer {
   return Buffer.from([
@@ -110,6 +165,18 @@ describe("polyglot scanner", () => {
     expect(result.threats).toEqual([]);
     expect(result.ok).toBe(true);
   });
+
+  it.each(ZIP_CONTAINER_CASES)(
+    "does not flag a normal $name ZIP container",
+    async ({ filename, detectedMime, buffer }) => {
+      const engine = new FileSecurityEngine({ scanners: ["polyglot"] });
+      const result = await engine.scan(buffer, { filename });
+
+      expect(result.detectedMime).toBe(detectedMime);
+      expect(result.threats).toEqual([]);
+      expect(result.ok).toBe(true);
+    },
+  );
 
   it("flags JPEG bytes followed by a ZIP archive", async () => {
     const polyglot = Buffer.concat([createMinimalJpeg(), createRawZip("hidden.txt")]);
