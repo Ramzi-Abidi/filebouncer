@@ -4,6 +4,12 @@ const normalizeMime = (mime: string): string => mime.split(";")[0]!.trim().toLow
 
 const mismatchSeverity = (strict?: boolean): Severity => (strict ? "critical" : "medium");
 
+const EXTENSION_ALIASES = [new Set(["jpg", "jpeg"]), new Set(["tif", "tiff"])];
+
+const extensionsMatch = (extension: string, detectedExt: string): boolean =>
+  extension === detectedExt ||
+  EXTENSION_ALIASES.some((aliases) => aliases.has(extension) && aliases.has(detectedExt));
+
 export class MimeScanner implements Scanner {
   readonly name = "mime";
 
@@ -67,7 +73,7 @@ export class MimeScanner implements Scanner {
 
   private checkExtensionMismatch(ctx: ScannerContext, threats: Threat[]) {
     const { extension, detectedExt } = ctx;
-    if (!extension || !detectedExt || extension === detectedExt) return;
+    if (!extension || !detectedExt || extensionsMatch(extension, detectedExt)) return;
 
     this.pushThreat(
       threats,
