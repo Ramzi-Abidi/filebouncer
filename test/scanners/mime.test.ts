@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { FileSecurityEngine } from "../../src/engine/file-security-engine";
+import { MimeScanner } from "../../src/scanners/mime";
+import type { ScannerContext } from "../../src/types";
 
 /** 1×1 PNG — enough for file-type signature detection. */
 const PNG = Buffer.from(
@@ -9,6 +11,25 @@ const PNG = Buffer.from(
 );
 
 describe("mime scanner", () => {
+  it.each([
+    ["jpeg", "jpg"],
+    ["jpg", "jpeg"],
+    ["tiff", "tif"],
+    ["tif", "tiff"],
+  ])(
+    "accepts equivalent extensions %s and %s in default and strict modes",
+    async (extension, detectedExt) => {
+      const context = { extension, detectedExt } as ScannerContext;
+
+      for (const config of [{}, { strict: true }]) {
+        const threats = await new MimeScanner(config).scan(context);
+        expect(threats).not.toEqual(
+          expect.arrayContaining([expect.objectContaining({ code: "EXTENSION_MISMATCH" })]),
+        );
+      }
+    },
+  );
+
   it("returns no threats when extension and declared MIME match detected type", async () => {
     const engine = new FileSecurityEngine({ scanners: ["mime"] });
     const result = await engine.scan(PNG, {
