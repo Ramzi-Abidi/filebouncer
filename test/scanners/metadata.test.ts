@@ -58,6 +58,24 @@ describe("metadata scanner", () => {
     );
   });
 
+  it("flags a parent-directory filename", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["metadata"] });
+    const result = await engine.scan(EMPTY, { filename: ".." });
+
+    expect(result.threats).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "UNSAFE_FILENAME", scanner: "metadata" }),
+      ]),
+    );
+  });
+
+  it("allows repeated dots inside a filename", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["metadata"] });
+    const result = await engine.scan(EMPTY, { filename: "report..final.pdf" });
+
+    expect(result.threats.find((threat) => threat.code === "UNSAFE_FILENAME")).toBeUndefined();
+  });
+
   it("flags null bytes in filename", async () => {
     const engine = new FileSecurityEngine({ scanners: ["metadata"] });
     const result = await engine.scan(EMPTY, { filename: "evil.pdf\u0000.jpg" });
