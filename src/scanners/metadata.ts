@@ -101,15 +101,17 @@ export class MetadataScanner implements Scanner {
   }
 
   private checkUnsafeFilename(filename: string, threats: Threat[]) {
-    if (filename.includes("..") || filename.includes("/") || filename.includes("\\")) {
-      this.pushThreat(
-        threats,
-        "UNSAFE_FILENAME",
-        "high",
-        `Filename contains unsafe path characters: ${filename}`,
-        filename,
-      );
-    }
+    const hasPathSeparator = filename.includes("/") || filename.includes("\\");
+    const isParentDirectory = filename === "..";
+    if (!hasPathSeparator && !isParentDirectory) return;
+
+    this.pushThreat(
+      threats,
+      "UNSAFE_FILENAME",
+      "high",
+      `Filename contains unsafe path components: ${filename}`,
+      filename,
+    );
   }
 
   private checkNullByteFilename(filename: string, threats: Threat[]) {
