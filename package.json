@@ -30,6 +30,8 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
+    "prepack": "pnpm build",
+    "prepublishOnly": "pnpm typecheck && pnpm lint && pnpm test",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
