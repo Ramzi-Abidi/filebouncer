@@ -66,3 +66,16 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm build
+
+      - name: Pack package
+        run: |
+          mkdir artifacts
+          pnpm pack --pack-destination artifacts
+
+      - name: Verify packed artifacts
+        run: |
+          package=(artifacts/*.tgz)
+          test "${#package[@]}" -eq 1
+          tar -tf "${package[0]}" | grep -qx "package/dist/index.js"
+          tar -tf "${package[0]}" | grep -qx "package/dist/index.d.ts"
+          tar -tf "${package[0]}" | grep -qx "package/dist/cli.js"
