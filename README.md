@@ -161,6 +161,10 @@ Results follow a clear model:
 
 `result.ok` is `true` only when nothing met `blockThreshold` **and** the scan finished without errors or timeout. Detections and scan failures are **returned as data**, not thrown — your middleware can still inspect `threats` / `errors` for details.
 
+The engine retains at most **100 findings** in `result.threats` by default. Configure this with `maxFindings` (a positive integer). When more findings are produced, `findingsTruncated` is `true` and `totalFindings` contains the exact count. Omitted findings still affect `ok`, `verdict`, and `failFast`.
+
+This limit bounds the aggregated `ScanResult`, not memory allocated inside a custom scanner before it returns. Custom scanners that can produce many findings should enforce their own internal limits.
+
 ### Scan budgets and early stopping
 
 `timeoutMs` is a soft budget checked before each scanner starts. It does not cancel a `scanner.scan()` already in progress, so one slow scanner can run past the budget. Once the budget has been exceeded, later scanners are skipped, `timedOut` is `true`, `errors` includes a `SCAN_TIMEOUT` entry, and `result.ok` is `false`.

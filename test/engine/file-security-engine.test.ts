@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_MAX_FILE_SIZE, FileSecurityEngine, ScanFailureError, scanBuffer } from "../../src";
-import type { Scanner } from "../../src/types";
+import {
+  DEFAULT_MAX_FILE_SIZE,
+  FileBouncerError,
+  FileSecurityEngine,
+  ScanFailureError,
+  scanBuffer,
+} from "../../src";
+import type { Scanner, Severity, Threat } from "../../src/types";
 
 const BUILT_IN_SCANNERS = ["mime", "metadata", "csv", "archive", "polyglot"];
 
@@ -11,6 +17,13 @@ const consideredScanners = (result: {
 }) => [...result.scannersRun, ...result.scannersSkipped.map((s) => s.name)].sort();
 
 const EMPTY = Buffer.alloc(0);
+
+const makeThreat = (index: number, severity: Severity = "low"): Threat => ({
+  scanner: "many",
+  code: `FINDING_${String(index)}`,
+  severity,
+  message: `finding ${String(index)}`,
+});
 
 describe("FileSecurityEngine", () => {
   it("sets ok false when a scanner throws, even with no threats", async () => {
@@ -123,6 +136,8 @@ describe("FileSecurityEngine", () => {
     expect(result.ok).toBe(true);
     expect(result.errors).toEqual([]);
     expect(result.timedOut).toBeFalsy();
+    expect(result.findingsTruncated).toBeUndefined();
+    expect(result.totalFindings).toBeUndefined();
   });
 
   it("rejects oversized input when maxFileSize is omitted (default 50 MiB)", async () => {
@@ -157,6 +172,90 @@ describe("FileSecurityEngine", () => {
     expect(allowed.ok).toBe(true);
     expect(allowed.threats).toEqual([]);
   });
+
+  it("retains at most 100 findings by default", async () => {
+    const many: Scanner = {
+      name: "many",
+      appliesTo: () => true,
+      scan: async () => Array.from({ length: 101 }, (_, index) => makeThreat(index)),
+    };
+
+    const result = await new FileSecurityEngine({
+      scanners: [],
+      customScanners: [many],
+    }).scan(EMPTY);
+
+    expect(result.threats).toHaveLength(100);
+    expect(result.threats[0]?.code).toBe("FINDING_0");
+    expect(result.threats[99]?.code).toBe("FINDING_99");
+    expect(result.findingsTruncated).toBe(true);
+    expect(result.totalFindings).toBe(101);
+  });
+
+  it("applies a custom findings limit across scanners in pipeline order", async () => {
+    const first: Scanner = {
+      name: "first",
+      appliesTo: () => true,
+      scan: async () => [makeThreat(0), makeThreat(1)],
+    };
+    const second: Scanner = {
+      name: "second",
+      appliesTo: () => true,
+      scan: async () => [makeThreat(2), makeThreat(3)],
+    };
+
+    const result = await new FileSecurityEngine({
+      scanners: [],
+      maxFindings: 3,
+      customScanners: [first, second],
+    }).scan(EMPTY);
+
+    expect(result.threats.map((threat) => threat.code)).toEqual([
+      "FINDING_0",
+      "FINDING_1",
+      "FINDING_2",
+    ]);
+    expect(result.findingsTruncated).toBe(true);
+    expect(result.totalFindings).toBe(4);
+  });
+
+  it("blocks and fails fast on a critical finding omitted by the limit", async () => {
+    const mixed: Scanner = {
+      name: "mixed",
+      appliesTo: () => true,
+      scan: async () => [makeThreat(0), makeThreat(1, "critical")],
+    };
+    const next: Scanner = {
+      name: "next",
+      appliesTo: () => true,
+      scan: async () => [],
+    };
+
+    const result = await new FileSecurityEngine({
+      scanners: [],
+      maxFindings: 1,
+      blockThreshold: "critical",
+      failFast: true,
+      customScanners: [mixed, next],
+    }).scan(EMPTY);
+
+    expect(result.threats).toEqual([makeThreat(0)]);
+    expect(result.totalFindings).toBe(2);
+    expect(result.findingsTruncated).toBe(true);
+    expect(result.verdict).toBe("malicious");
+    expect(result.ok).toBe(false);
+    expect(result.scannersRun).toEqual(["mixed"]);
+    expect(result.scannersSkipped).toEqual([
+      expect.objectContaining({ name: "next", reason: "fail-fast" }),
+    ]);
+  });
+
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    "rejects invalid maxFindings value %s",
+    (maxFindings) => {
+      expect(() => new FileSecurityEngine({ maxFindings })).toThrowError(FileBouncerError);
+    },
+  );
 
   it("uses high as the default blockThreshold", async () => {
     const medium: Scanner = {

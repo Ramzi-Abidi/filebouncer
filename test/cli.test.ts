@@ -108,6 +108,32 @@ describe("CLI helpers", () => {
     expect(text).not.toContain("Timed out");
   });
 
+  it("shows the total when findings are truncated", () => {
+    const result = {
+      ok: false,
+      verdict: "malicious",
+      size: 100,
+      threats: [
+        {
+          scanner: "custom",
+          code: "FIRST_FINDING",
+          severity: "high",
+          message: "first finding",
+        },
+      ],
+      findingsTruncated: true,
+      totalFindings: 3,
+      errors: [],
+      scannersRun: ["custom"],
+      scannersSkipped: [],
+      durationMs: 1,
+    } satisfies ScanResult;
+
+    const text = formatHuman(result, "0.5.0", "upload.bin");
+
+    expect(text).toContain("Findings (showing 1 of 3):");
+  });
+
   it("formats human output for a suspicious result that does not block", () => {
     const result = {
       ok: true,

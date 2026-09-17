@@ -1,4 +1,4 @@
-import type { Severity, Threat, Verdict } from "../types";
+import type { Severity, Verdict } from "../types";
 
 const SEVERITY_ORDER: Severity[] = ["info", "low", "medium", "high", "critical"];
 
@@ -7,14 +7,11 @@ const severityRank = (severity: Severity): number => SEVERITY_ORDER.indexOf(seve
 export const meetsThreshold = (severity: Severity, threshold: Severity): boolean =>
   severityRank(severity) >= severityRank(threshold);
 
-export const computeVerdict = (threats: Threat[]): Verdict => {
-  if (threats.length === 0) return "clean";
+export const moreSevere = (current: Severity | undefined, candidate: Severity): Severity =>
+  current === undefined || severityRank(candidate) > severityRank(current) ? candidate : current;
 
-  const worst = threats.reduce(
-    (max, t) => (severityRank(t.severity) > severityRank(max) ? t.severity : max),
-    threats[0]!.severity,
-  );
-
+export const computeVerdict = (worst: Severity | undefined): Verdict => {
+  if (worst === undefined) return "clean";
   if (meetsThreshold(worst, "high")) return "malicious";
   return "suspicious";
 };
