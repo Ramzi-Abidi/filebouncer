@@ -74,7 +74,12 @@ export interface ScanResult {
   declaredMime?: string;
   /** Extension parsed from `filename`, lowercased, without leading dot. */
   extension?: string;
+  /** Findings retained in this result, capped by `EngineConfig.maxFindings`. */
   threats: Threat[];
+  /** `true` when additional findings were omitted from `threats`. */
+  findingsTruncated?: boolean;
+  /** Exact number of findings produced before result truncation. */
+  totalFindings?: number;
   errors: ScanError[];
   scannersRun: string[];
   scannersSkipped: SkippedScanner[];
@@ -209,6 +214,11 @@ export interface EngineConfig {
    * Defaults to 50 MiB (`50 * 1024 * 1024`) when omitted.
    */
   maxFileSize?: number;
+  /**
+   * Maximum findings retained in `ScanResult.threats`. Defaults to `100`.
+   * Must be a positive integer. All findings still affect blocking and verdicts.
+   */
+  maxFindings?: number;
   /**
    * Threats with severity >= this value flip `ScanResult.ok` to `false`.
    * Defaults to `"high"`.

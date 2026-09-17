@@ -92,7 +92,11 @@ export const formatHuman = (result: ScanResult, version: string, fileLabel: stri
   }
 
   if (result.threats.length > 0) {
-    lines.push("", "Findings:");
+    const findingsLabel =
+      result.findingsTruncated && result.totalFindings !== undefined
+        ? `Findings (showing ${String(result.threats.length)} of ${String(result.totalFindings)}):`
+        : "Findings:";
+    lines.push("", findingsLabel);
     for (const threat of result.threats) {
       lines.push(`  ${threat.severity.padEnd(8)} ${threat.code}`);
       lines.push(`           ${threat.message}`);

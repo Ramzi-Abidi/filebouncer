@@ -2,6 +2,7 @@ import { resolveBuiltInScanners } from "./built-ins";
 import { ScanFailureError } from "./scan-failure-error";
 import { type RawInput, InputTooLargeError, normalizeInput } from "../input";
 import { detectType } from "../util/detect-type";
+import { FileBouncerError } from "../types";
 import type {
   EngineConfig,
   ScanError,
@@ -9,20 +10,29 @@ import type {
   ScanResult,
   Scanner,
   ScannerContext,
+  Severity,
   SkippedScanner,
   Threat,
 } from "../types";
-import { computeVerdict, meetsThreshold } from "./verdict";
+import { computeVerdict, meetsThreshold, moreSevere } from "./verdict";
 
 export const DEFAULT_MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+const DEFAULT_MAX_FINDINGS = 100;
 
 export class FileSecurityEngine {
   private readonly config: EngineConfig;
   private readonly scanners: Scanner[];
+  private readonly maxFindings: number;
 
   constructor(config: EngineConfig = {}) {
+    const maxFindings = config.maxFindings ?? DEFAULT_MAX_FINDINGS;
+    if (!Number.isInteger(maxFindings) || maxFindings <= 0) {
+      throw new FileBouncerError("maxFindings must be a positive integer");
+    }
+
     this.config = config;
     this.scanners = [...resolveBuiltInScanners(config), ...(config.customScanners ?? [])];
+    this.maxFindings = maxFindings;
   }
 
   use(scanner: Scanner) {
@@ -81,6 +91,11 @@ export class FileSecurityEngine {
     const errors: ScanError[] = [];
     const scannersRun: string[] = [];
     const scannersSkipped: SkippedScanner[] = [];
+    const blockThreshold = this.config.blockThreshold ?? "high";
+    let totalFindings = 0;
+    let worstSeverity: Severity | undefined;
+    let isBlocked = false;
+    let hasCriticalFinding = false;
     let timedOut = false;
 
     for (let i = 0; i < this.scanners.length; i++) {
@@ -108,7 +123,16 @@ export class FileSecurityEngine {
 
       try {
         const findings = await scanner.scan(ctx);
-        threats.push(...findings);
+        for (const finding of findings) {
+          totalFindings += 1;
+          worstSeverity = moreSevere(worstSeverity, finding.severity);
+          isBlocked ||= meetsThreshold(finding.severity, blockThreshold);
+          hasCriticalFinding ||= finding.severity === "critical";
+
+          if (threats.length < this.maxFindings) {
+            threats.push(finding);
+          }
+        }
       } catch (err) {
         errors.push({
           scanner: scanner.name,
@@ -118,7 +142,7 @@ export class FileSecurityEngine {
         });
       }
 
-      if (failFast && threats.some((t) => t.severity === "critical")) {
+      if (failFast && hasCriticalFinding) {
         for (let j = i + 1; j < this.scanners.length; j++) {
           scannersSkipped.push({ name: this.scanners[j]!.name, reason: "fail-fast" });
         }
@@ -126,10 +150,9 @@ export class FileSecurityEngine {
       }
     }
 
-    const blockThreshold = this.config.blockThreshold ?? "high";
-    const isBlocked = threats.some((t) => meetsThreshold(t.severity, blockThreshold));
     const hasScanFailure = errors.length > 0 || timedOut;
-    const verdict = computeVerdict(threats);
+    const verdict = computeVerdict(worstSeverity);
+    const findingsTruncated = totalFindings > threats.length;
 
     return {
       ok: !isBlocked && !hasScanFailure,
@@ -140,6 +163,7 @@ export class FileSecurityEngine {
       declaredMime: normalized.declaredMime,
       extension: normalized.extension,
       threats,
+      ...(findingsTruncated ? { findingsTruncated: true, totalFindings } : {}),
       errors,
       scannersRun,
       scannersSkipped,
