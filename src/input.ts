@@ -66,7 +66,7 @@ export class InputTooLargeError extends Error {
  * - Throws {@link InputTooLargeError} if `opts.maxBytes` is set and exceeded.
  * - Throws {@link FileBouncerError} if `raw` is not a supported input type.
  *
- * Streams are drained eagerly so `size` is always known by the time this
+ * Streams and paths are read eagerly so `size` is always known by the time this
  * function resolves.
  */
 export async function normalizeInput(
@@ -157,23 +157,38 @@ async function normalizePath(filePath: string, opts: NormalizeOptions): Promise<
   }
   enforceCap(stats.size, opts.maxBytes);
 
-  const filename = opts.filename ?? path.basename(filePath);
-  const declaredMime = opts.declaredMime;
-  const extension = parseExtension(filename);
-  let cached: Buffer | undefined;
+  const handle = await fs.open(filePath, "r");
+  try {
+    const openedStats = await handle.stat();
+    if (!openedStats.isFile()) {
+      throw new FileBouncerError(`Path is not a regular file: ${filePath}`);
+    }
+    enforceCap(openedStats.size, opts.maxBytes);
 
-  return {
-    size: stats.size,
-    filename,
-    declaredMime,
-    extension,
-    read: async () => {
-      if (cached === undefined) {
-        cached = await fs.readFile(filePath);
+    const chunks: Buffer[] = [];
+    let total = 0;
+    for (;;) {
+      let length = 64 * 1024;
+      if (opts.maxBytes !== undefined && Number.isFinite(opts.maxBytes)) {
+        // Read one extra byte to detect growth without buffering the whole file.
+        length = Math.min(length, Math.floor(opts.maxBytes) - total + 1);
       }
-      return cached;
-    },
-  };
+      const chunk = Buffer.alloc(length);
+      const { bytesRead } = await handle.read(chunk, 0, length, null);
+      if (bytesRead === 0) break;
+      total += bytesRead;
+      enforceCap(total, opts.maxBytes);
+      chunks.push(chunk.subarray(0, bytesRead));
+    }
+
+    return makeBufferInput(
+      Buffer.concat(chunks, total),
+      opts.filename ?? path.basename(filePath),
+      opts.declaredMime,
+    );
+  } finally {
+    await handle.close();
+  }
 }
 
 async function drainNodeReadable(stream: Readable, maxBytes?: number): Promise<Buffer> {
