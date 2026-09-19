@@ -83,6 +83,7 @@ describe("CLI helpers", () => {
   it("formats human output for a blocked result", () => {
     const result = {
       ok: false,
+      outcome: "blocked",
       verdict: "malicious",
       size: 100,
       detectedMime: "image/jpeg",
@@ -104,6 +105,7 @@ describe("CLI helpers", () => {
     expect(text).toContain("filebouncer v0.5.0");
     expect(text).toContain("POLYGLOT_DETECTED");
     expect(text).toContain("Verdict: malicious");
+    expect(text).toContain("Outcome: blocked");
     expect(text).toContain("Result: BLOCK");
     expect(text).not.toContain("Timed out");
   });
@@ -111,6 +113,7 @@ describe("CLI helpers", () => {
   it("shows the total when findings are truncated", () => {
     const result = {
       ok: false,
+      outcome: "blocked",
       verdict: "malicious",
       size: 100,
       threats: [
@@ -137,6 +140,7 @@ describe("CLI helpers", () => {
   it("formats human output for a suspicious result that does not block", () => {
     const result = {
       ok: true,
+      outcome: "pass",
       verdict: "suspicious",
       size: 100,
       detectedMime: "text/plain",
@@ -156,6 +160,7 @@ describe("CLI helpers", () => {
 
     const text = formatHuman(result, "0.5.0", "sheet.csv");
     expect(text).toContain("Verdict: suspicious");
+    expect(text).toContain("Outcome: pass");
     expect(text).toContain("Result: OK");
     expect(text).not.toContain("Timed out");
   });
@@ -163,6 +168,7 @@ describe("CLI helpers", () => {
   it("formats human output when the scan timed out", () => {
     const result = {
       ok: false,
+      outcome: "incomplete",
       verdict: "clean",
       size: 100,
       detectedMime: "image/jpeg",
@@ -182,6 +188,7 @@ describe("CLI helpers", () => {
 
     const text = formatHuman(result, "0.5.0", "photo.jpg");
     expect(text).toContain("Verdict: clean");
+    expect(text).toContain("Outcome: incomplete");
     expect(text).toContain("Timed out: yes");
     expect(text).toContain("Result: BLOCK");
   });
@@ -189,6 +196,7 @@ describe("CLI helpers", () => {
   it("formats JSON safely when errors contains an Error cause", () => {
     const result = {
       ok: false,
+      outcome: "incomplete",
       verdict: "clean",
       size: 100,
       threats: [],
@@ -225,6 +233,7 @@ describe("CLI helpers", () => {
 
     const result = {
       ok: false,
+      outcome: "incomplete",
       verdict: "clean",
       size: 100,
       threats: [],
@@ -282,6 +291,7 @@ describe("runCli", () => {
     });
 
     expect(code).toBe(0);
+    expect(logs.join("\n")).toContain("Outcome: pass");
     expect(logs.join("\n")).toContain("Result: OK");
   });
 
@@ -298,6 +308,7 @@ describe("runCli", () => {
 
     expect(code).toBe(1);
     expect(logs.join("\n")).toContain("POLYGLOT_DETECTED");
+    expect(logs.join("\n")).toContain("Outcome: blocked");
     expect(logs.join("\n")).toContain("Result: BLOCK");
   });
 
@@ -334,6 +345,7 @@ describe("runCli", () => {
     expect(code).toBe(0);
     const parsed = JSON.parse(logs[0]!) as ScanResult;
     expect(parsed.ok).toBe(true);
+    expect(parsed.outcome).toBe("pass");
     expect(parsed.detectedMime).toBe("image/jpeg");
     expect(parsed.threats).toEqual([]);
     expect(parsed.errors).toEqual([]);

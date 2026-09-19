@@ -34,7 +34,7 @@ npx @filebouncer/core ./your-file.jpg
 Example output when the file is a JPEG that also contains a ZIP:
 
 ```text
-filebouncer v0.6.5
+filebouncer v0.6.8
 
 File: polyglot.jpg
 Size: 38137 bytes
@@ -45,13 +45,14 @@ Findings:
            File appears to match more than one format (image/jpeg and application/zip @ 38115)
 
 Verdict: malicious
+Outcome: blocked
 Result: BLOCK
 ```
 
 Example output for a normal image:
 
 ```text
-filebouncer v0.6.5
+filebouncer v0.6.8
 
 File: photo.jpg
 Size: 37961 bytes
@@ -60,6 +61,7 @@ Detected MIME: image/jpeg
 Findings: (none)
 
 Verdict: clean
+Outcome: pass
 Result: OK
 ```
 
@@ -67,7 +69,7 @@ To reproduce the blocked example locally: `cat photo.jpg secret.zip > polyglot.j
 
 `npx @filebouncer/core` runs the CLI via the `core` bin (required for scoped packages). After install, `filebouncer` works too. Use `--json` only when you need machine-readable output for scripts.
 
-Exit codes: `0` = OK · `1` = BLOCK · `2` = unexpected error · `3` = usage error.
+Exit codes: `0` = pass · `1` = blocked or incomplete · `2` = unexpected error · `3` = usage error.
 
 ---
 
@@ -147,7 +149,7 @@ filebouncer fills the gap: **lightweight, typed, Node-native structural checks**
 
 ## Status
 
-**v0.6.5**. The scan engine, CLI, and MIME / metadata / CSV / archive / polyglot scanners are available. Public API may still evolve.
+**v0.6.8**. The scan engine, CLI, and MIME / metadata / CSV / archive / polyglot scanners are available. Public API may still evolve.
 
 ---
 
@@ -158,6 +160,8 @@ Results follow a clear model:
 - **Findings** → `result.threats[]` (e.g. `MIME_MISMATCH`, `UNSAFE_ENTRY_PATH`)
 - **Scan failures** → `result.errors[]` (scanner crash, timeout)
 - **Programmer mistakes** → throw `FileBouncerError` (bad config, unsupported input)
+
+`result.outcome` is `pass` when the scan completes without a blocking finding, `blocked` when a finding meets `blockThreshold`, and `incomplete` when any scanner errors or the scan times out. Scan failures take precedence, so a scan with both a blocking finding and an error is `incomplete`.
 
 `result.ok` is `true` only when nothing met `blockThreshold` **and** the scan finished without errors or timeout. Detections and scan failures are **returned as data**, not thrown — your middleware can still inspect `threats` / `errors` for details.
 

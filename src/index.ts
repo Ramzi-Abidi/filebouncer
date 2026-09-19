@@ -7,6 +7,7 @@ export type {
   MimeConfig,
   PolyglotConfig,
   ScanError,
+  ScanOutcome,
   ScanOptions,
   ScanResult,
   Scanner,
