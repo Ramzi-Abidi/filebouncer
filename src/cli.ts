@@ -114,6 +114,7 @@ export const formatHuman = (result: ScanResult, version: string, fileLabel: stri
 
   lines.push("");
   lines.push(`Verdict: ${result.verdict}`);
+  lines.push(`Outcome: ${result.outcome}`);
   if (result.timedOut) {
     lines.push("Timed out: yes");
   }

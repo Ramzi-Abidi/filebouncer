@@ -15,6 +15,9 @@ export type Severity = "info" | "low" | "medium" | "high" | "critical";
 /** Coarse bucket derived from the highest-severity threat in a scan. */
 export type Verdict = "clean" | "suspicious" | "malicious";
 
+/** Final scan disposition, including whether the scan completed successfully. */
+export type ScanOutcome = "pass" | "blocked" | "incomplete";
+
 /**
  * A single detection emitted by a scanner. Threats are *findings*, not
  * errors — a scanner that runs successfully and finds nothing returns `[]`.
@@ -64,6 +67,11 @@ export interface ScanResult {
    * and no fatal error occurred. This is the boolean callers branch on.
    */
   ok: boolean;
+  /**
+   * `incomplete` when any scanner failed or the scan timed out, `blocked`
+   * when a finding met the block threshold, otherwise `pass`.
+   */
+  outcome: ScanOutcome;
   verdict: Verdict;
   filename?: string;
   /** Size of the input in bytes. */

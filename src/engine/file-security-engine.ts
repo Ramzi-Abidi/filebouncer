@@ -54,6 +54,7 @@ export class FileSecurityEngine {
       if (err instanceof InputTooLargeError) {
         return {
           ok: false,
+          outcome: "blocked",
           verdict: "malicious",
           size: err.observedAtLeast,
           threats: [
@@ -152,10 +153,12 @@ export class FileSecurityEngine {
 
     const hasScanFailure = errors.length > 0 || timedOut;
     const verdict = computeVerdict(worstSeverity);
+    const outcome = hasScanFailure ? "incomplete" : isBlocked ? "blocked" : "pass";
     const findingsTruncated = totalFindings > threats.length;
 
     return {
       ok: !isBlocked && !hasScanFailure,
+      outcome,
       verdict,
       filename: normalized.filename,
       size: normalized.size,

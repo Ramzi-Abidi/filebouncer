@@ -7,7 +7,7 @@ import {
   ScanFailureError,
   scanBuffer,
 } from "../../src";
-import type { Scanner, Severity, Threat } from "../../src/types";
+import type { Scanner, ScanOutcome, Severity, Threat } from "../../src";
 
 const BUILT_IN_SCANNERS = ["mime", "metadata", "csv", "archive", "polyglot"];
 
@@ -17,6 +17,7 @@ const consideredScanners = (result: {
 }) => [...result.scannersRun, ...result.scannersSkipped.map((s) => s.name)].sort();
 
 const EMPTY = Buffer.alloc(0);
+const PASS_OUTCOME: ScanOutcome = "pass";
 
 const makeThreat = (index: number, severity: Severity = "low"): Threat => ({
   scanner: "many",
@@ -42,6 +43,7 @@ describe("FileSecurityEngine", () => {
     const result = await engine.scan(EMPTY, { filename: "report.pdf" });
 
     expect(result.ok).toBe(false);
+    expect(result.outcome).toBe("incomplete");
     expect(result.threats).toEqual([]);
     expect(result.errors).toEqual(
       expect.arrayContaining([
@@ -52,6 +54,30 @@ describe("FileSecurityEngine", () => {
         }),
       ]),
     );
+  });
+
+  it("reports incomplete when a blocking finding and scanner error both occur", async () => {
+    const blocking: Scanner = {
+      name: "blocking",
+      appliesTo: () => true,
+      scan: async () => [makeThreat(0, "high")],
+    };
+    const failing: Scanner = {
+      name: "failing",
+      appliesTo: () => true,
+      scan: async () => {
+        throw new Error("failed");
+      },
+    };
+
+    const result = await new FileSecurityEngine({
+      scanners: [],
+      customScanners: [blocking, failing],
+    }).scan(EMPTY);
+
+    expect(result.ok).toBe(false);
+    expect(result.outcome).toBe("incomplete");
+    expect(result.verdict).toBe("malicious");
   });
 
   it("maps ScanFailureError to the provided error code", async () => {
@@ -106,6 +132,7 @@ describe("FileSecurityEngine", () => {
     const result = await engine.scan(EMPTY, { filename: "report.pdf" });
 
     expect(result.ok).toBe(false);
+    expect(result.outcome).toBe("incomplete");
     expect(result.timedOut).toBe(true);
     expect(result.errors).toEqual(
       expect.arrayContaining([
@@ -134,6 +161,7 @@ describe("FileSecurityEngine", () => {
     const result = await engine.scan(EMPTY, { filename: "report.pdf" });
 
     expect(result.ok).toBe(true);
+    expect(result.outcome).toBe(PASS_OUTCOME);
     expect(result.errors).toEqual([]);
     expect(result.timedOut).toBeFalsy();
     expect(result.findingsTruncated).toBeUndefined();
@@ -147,6 +175,7 @@ describe("FileSecurityEngine", () => {
     });
 
     expect(result.ok).toBe(false);
+    expect(result.outcome).toBe("blocked");
     expect(result.threats).toEqual([
       expect.objectContaining({
         scanner: "engine",
@@ -295,6 +324,7 @@ describe("FileSecurityEngine", () => {
     }).scan(EMPTY, { filename: "report.pdf" });
 
     expect(mediumResult.ok).toBe(true);
+    expect(mediumResult.outcome).toBe("pass");
     expect(mediumResult.verdict).toBe("suspicious");
     expect(mediumResult.threats).toEqual([
       expect.objectContaining({
@@ -304,6 +334,7 @@ describe("FileSecurityEngine", () => {
     ]);
 
     expect(highResult.ok).toBe(false);
+    expect(highResult.outcome).toBe("blocked");
     expect(highResult.verdict).toBe("malicious");
   });
 
