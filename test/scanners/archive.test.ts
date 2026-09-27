@@ -154,6 +154,22 @@ describe("archive scanner", () => {
     );
   });
 
+  it("flags null bytes in entry names", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const zip = createRawZip("\0secret.txt");
+    const result = await engine.scan(zip, { filename: "evil.zip" });
+
+    expect(result.threats).toEqual([
+      {
+        code: "UNSAFE_ENTRY_PATH",
+        scanner: "archive",
+        severity: "critical",
+        message: "Archive entry name contains a null byte",
+        path: "\0secret.txt",
+      },
+    ]);
+  });
+
   it("flags too many entries as a zip bomb", async () => {
     const engine = new FileSecurityEngine({
       scanners: ["archive"],
