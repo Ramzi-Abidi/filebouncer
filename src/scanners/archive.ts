@@ -1,7 +1,8 @@
 import { fromBufferPromise } from "yauzl";
 
 import { ScanFailureError } from "../engine/scan-failure-error";
-import type { ArchiveConfig, Scanner, ScannerContext, Severity, Threat } from "../types";
+import type { ArchiveConfig, Scanner, ScannerContext, Threat } from "../types";
+import { checkArchiveEntryName, checkArchiveSymlink, makeArchiveThreat } from "./archive-entry";
 
 const ARCHIVE_EXTENSIONS = ["zip", "jar", "apk"];
 const ARCHIVE_MIMES = [
@@ -77,7 +78,7 @@ export class ArchiveScanner implements Scanner {
 
         if (entry.isEncrypted()) {
           threats.push(
-            this.makeThreat(
+            makeArchiveThreat(
               "ENCRYPTED_ENTRY",
               "high",
               `Archive entry is encrypted: ${fileName}`,
@@ -86,8 +87,13 @@ export class ArchiveScanner implements Scanner {
           );
         }
 
-        this.checkEntryName(fileName, threats);
-        this.checkSymlink(entry.versionMadeBy, entry.externalFileAttributes, fileName, threats);
+        checkArchiveEntryName(fileName, threats);
+        checkArchiveSymlink(
+          fileName,
+          ArchiveScanner.isSymlink(entry.versionMadeBy, entry.externalFileAttributes),
+          this.options.allowSymlinks,
+          threats,
+        );
 
         if (!fileName.endsWith("/")) {
           totalUncompressed += entry.uncompressedSize;
@@ -98,7 +104,7 @@ export class ArchiveScanner implements Scanner {
 
         if (entryCount > this.options.maxEntries) {
           threats.push(
-            this.makeThreat(
+            makeArchiveThreat(
               "ARCHIVE_ENTRY_LIMIT",
               "critical",
               `Archive has more than ${String(this.options.maxEntries)} entries`,
@@ -111,7 +117,7 @@ export class ArchiveScanner implements Scanner {
 
         if (totalUncompressed > this.options.maxTotalUncompressed) {
           threats.push(
-            this.makeThreat(
+            makeArchiveThreat(
               "ARCHIVE_SIZE_LIMIT",
               "critical",
               `Archive uncompressed size exceeds ${String(this.options.maxTotalUncompressed)} bytes`,
@@ -131,7 +137,7 @@ export class ArchiveScanner implements Scanner {
         totalUncompressed / totalCompressed > this.options.maxRatio
       ) {
         threats.push(
-          this.makeThreat(
+          makeArchiveThreat(
             "ARCHIVE_RATIO_LIMIT",
             "critical",
             `Archive compression ratio exceeds ${String(this.options.maxRatio)}:1`,
@@ -148,7 +154,7 @@ export class ArchiveScanner implements Scanner {
     } catch (error) {
       if (error instanceof Error && error.message === YAUZL_STRONG_ENCRYPTION_ERROR) {
         threats.push(
-          this.makeThreat(
+          makeArchiveThreat(
             "ENCRYPTED_ENTRY",
             "high",
             "Archive contains a strongly encrypted entry",
@@ -168,57 +174,6 @@ export class ArchiveScanner implements Scanner {
     return threats;
   }
 
-  private checkEntryName(fileName: string, threats: Threat[]): void {
-    if (fileName.includes("\0")) {
-      threats.push(
-        this.makeThreat(
-          "UNSAFE_ENTRY_PATH",
-          "critical",
-          "Archive entry name contains a null byte",
-          fileName,
-        ),
-      );
-      return;
-    }
-
-    if (fileName.startsWith("/") || /^[A-Za-z]:[/\\]/.test(fileName)) {
-      threats.push(
-        this.makeThreat(
-          "UNSAFE_ABS_PATH",
-          "high",
-          `Archive entry uses an absolute path: ${fileName}`,
-          fileName,
-        ),
-      );
-    }
-
-    const segments = fileName.split(/[/\\]/);
-    if (segments.some((segment) => segment === "..")) {
-      threats.push(
-        this.makeThreat(
-          "UNSAFE_ENTRY_PATH",
-          "critical",
-          `Archive entry path leaves the destination directory: ${fileName}`,
-          fileName,
-        ),
-      );
-    }
-  }
-
-  private checkSymlink(
-    versionMadeBy: number,
-    externalFileAttributes: number,
-    fileName: string,
-    threats: Threat[],
-  ): void {
-    if (this.options.allowSymlinks) return;
-    if (!ArchiveScanner.isSymlink(versionMadeBy, externalFileAttributes)) return;
-
-    threats.push(
-      this.makeThreat("LINK_ENTRY", "high", `Archive contains a link entry: ${fileName}`, fileName),
-    );
-  }
-
   private checkEntryRatio(
     compressedSize: number,
     uncompressedSize: number,
@@ -229,7 +184,7 @@ export class ArchiveScanner implements Scanner {
     if (uncompressedSize / compressedSize <= this.options.maxRatio) return;
 
     threats.push(
-      this.makeThreat(
+      makeArchiveThreat(
         "ARCHIVE_RATIO_LIMIT",
         "critical",
         `Archive entry compression ratio exceeds ${String(this.options.maxRatio)}:1`,
@@ -242,24 +197,6 @@ export class ArchiveScanner implements Scanner {
         },
       ),
     );
-  }
-
-  private makeThreat(
-    code: string,
-    severity: Severity,
-    message: string,
-    path: string | undefined,
-    meta?: Record<string, unknown>,
-  ): Threat {
-    const threat: Threat = {
-      scanner: this.name,
-      code,
-      severity,
-      message,
-    };
-    if (path !== undefined) threat.path = path;
-    if (meta !== undefined) threat.meta = meta;
-    return threat;
   }
 
   private static isArchiveMime(mime: string): boolean {
