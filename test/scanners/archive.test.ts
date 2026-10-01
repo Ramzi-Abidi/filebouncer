@@ -1,5 +1,7 @@
 import type { Readable } from "node:stream";
-import { crc32 } from "node:zlib";
+import { crc32, gzipSync } from "node:zlib";
+
+import { packTar, type TarHeader } from "modern-tar";
 
 import { describe, expect, it } from "vitest";
 import { ZipFile } from "yazl";
@@ -86,6 +88,30 @@ async function createZip(
   return Buffer.concat(chunks);
 }
 
+interface TarTestEntry {
+  name: string;
+  data?: Buffer;
+  type?: TarHeader["type"];
+  linkname?: string;
+}
+
+async function createTar(entries: TarTestEntry[], gzip = false): Promise<Buffer> {
+  const tar = Buffer.from(
+    await packTar(
+      entries.map((entry) => ({
+        header: {
+          name: entry.name,
+          size: entry.data?.length ?? 0,
+          type: entry.type,
+          linkname: entry.linkname,
+        },
+        body: entry.data,
+      })),
+    ),
+  );
+  return gzip ? gzipSync(tar) : tar;
+}
+
 describe("archive scanner", () => {
   it("returns no threats for a normal zip", async () => {
     const engine = new FileSecurityEngine({ scanners: ["archive"] });
@@ -95,6 +121,28 @@ describe("archive scanner", () => {
     expect(result.ok).toBe(true);
     expect(result.threats).toEqual([]);
     expect(result.scannersRun).toContain("archive");
+  });
+
+  it("returns no threats for a normal tar detected from its signature", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const tar = await createTar([{ name: "hello.txt", data: Buffer.from("hello") }]);
+    const result = await engine.scan(tar);
+
+    expect(result.ok).toBe(true);
+    expect(result.threats).toEqual([]);
+    expect(result.scannersRun).toContain("archive");
+  });
+
+  it("scans tar.gz and tgz archives", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const tarGzip = await createTar([{ name: "hello.txt", data: Buffer.from("hello") }], true);
+    const detectedResult = await engine.scan(tarGzip);
+    const tgzResult = await engine.scan(tarGzip, { filename: "upload.tgz" });
+
+    expect(detectedResult.ok).toBe(true);
+    expect(detectedResult.scannersRun).toContain("archive");
+    expect(tgzResult.ok).toBe(true);
+    expect(tgzResult.scannersRun).toContain("archive");
   });
 
   it("blocks encrypted zip entries", async () => {
@@ -245,6 +293,142 @@ describe("archive scanner", () => {
     const result = await engine.scan(zip, { filename: "link.zip" });
 
     expect(result.threats.find((t) => t.code === "LINK_ENTRY")).toBeUndefined();
+  });
+
+  it("flags path traversal in tar entries", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const tar = await createTar([{ name: "../../etc/passwd", data: Buffer.from("x") }]);
+    const result = await engine.scan(tar, { filename: "evil.tar" });
+
+    expect(result.threats).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "UNSAFE_ENTRY_PATH", scanner: "archive" }),
+      ]),
+    );
+  });
+
+  it("flags tar symlinks by default", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const tar = await createTar([{ name: "link", type: "symlink", linkname: "/tmp/target" }]);
+    const result = await engine.scan(tar, { filename: "link.tar" });
+
+    expect(result.threats).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "LINK_ENTRY", path: "link" })]),
+    );
+  });
+
+  it("allows tar symlinks when configured", async () => {
+    const engine = new FileSecurityEngine({
+      scanners: ["archive"],
+      archive: { allowSymlinks: true },
+    });
+    const tar = await createTar([{ name: "link", type: "symlink", linkname: "target" }]);
+    const result = await engine.scan(tar, { filename: "link.tar" });
+
+    expect(result.threats.find((threat) => threat.code === "LINK_ENTRY")).toBeUndefined();
+  });
+
+  it("does not allow tar hardlinks through allowSymlinks", async () => {
+    const engine = new FileSecurityEngine({
+      scanners: ["archive"],
+      archive: { allowSymlinks: true },
+    });
+    const tar = await createTar([{ name: "link", type: "link", linkname: "target" }]);
+    const result = await engine.scan(tar, { filename: "link.tar" });
+
+    expect(result.threats).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "LINK_ENTRY", path: "link" })]),
+    );
+  });
+
+  it("enforces the archive entry limit for tar", async () => {
+    const engine = new FileSecurityEngine({
+      scanners: ["archive"],
+      archive: { maxEntries: 2 },
+    });
+    const tar = await createTar([{ name: "a" }, { name: "b" }, { name: "c" }]);
+    const result = await engine.scan(tar, { filename: "bomb.tar" });
+
+    expect(result.threats).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "ARCHIVE_ENTRY_LIMIT" })]),
+    );
+  });
+
+  it("enforces the uncompressed size limit for tar", async () => {
+    const engine = new FileSecurityEngine({
+      scanners: ["archive"],
+      archive: { maxTotalUncompressed: 100 },
+    });
+    const tar = await createTar([{ name: "big.bin", data: Buffer.alloc(200) }]);
+    const result = await engine.scan(tar, { filename: "bomb.tar" });
+
+    expect(result.threats).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "ARCHIVE_SIZE_LIMIT" })]),
+    );
+  });
+
+  it("enforces the aggregate compression ratio for tar.gz", async () => {
+    const engine = new FileSecurityEngine({
+      scanners: ["archive"],
+      archive: { maxRatio: 5 },
+    });
+    const tarGzip = await createTar([{ name: "zeros.bin", data: Buffer.alloc(50_000) }], true);
+    const result = await engine.scan(tarGzip, { filename: "bomb.tar.gz" });
+
+    expect(result.threats).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "ARCHIVE_RATIO_LIMIT" })]),
+    );
+  });
+
+  it("stops gzip expansion beyond the aggregate ratio limit", async () => {
+    const engine = new FileSecurityEngine({
+      scanners: ["archive"],
+      archive: { maxRatio: 5 },
+    });
+    const tar = await createTar([]);
+    const tarGzip = gzipSync(Buffer.concat([tar, Buffer.alloc(50_000)]));
+    const result = await engine.scan(tarGzip, { filename: "bomb.tgz" });
+
+    expect(result.threats).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "ARCHIVE_RATIO_LIMIT" })]),
+    );
+  });
+
+  it("fails closed for corrupt tar archives", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const tar = await createTar([{ name: "hello.txt", data: Buffer.from("hello") }]);
+    tar[0] = tar[0]! ^ 0xff;
+    const result = await engine.scan(tar, { filename: "broken.tar" });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ scanner: "archive", code: "CORRUPT_ARCHIVE" }),
+      ]),
+    );
+  });
+
+  it("fails closed for corrupt tar.gz archives", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const result = await engine.scan(Buffer.from("not-gzip"), { filename: "broken.tgz" });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ scanner: "archive", code: "CORRUPT_ARCHIVE" }),
+      ]),
+    );
+  });
+
+  it("skips gzip streams that are not tar archives", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const result = await engine.scan(gzipSync(Buffer.from("hello")), { filename: "note.gz" });
+
+    expect(result.scannersSkipped).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "archive", reason: "appliesTo returned false" }),
+      ]),
+    );
   });
 
   it("blocks corrupt archives", async () => {

@@ -60,6 +60,7 @@
   },
   "dependencies": {
     "file-type": "^21.0.0",
+    "modern-tar": "^0.8.5",
     "yauzl": "^3.4.0"
   },
   "devDependencies": {
