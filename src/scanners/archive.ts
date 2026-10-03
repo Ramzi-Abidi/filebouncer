@@ -2,18 +2,20 @@ import { ScanFailureError } from "../engine/scan-failure-error";
 import type { ArchiveConfig, Scanner, ScannerContext, Threat } from "../types";
 import type { ArchivePolicyOptions } from "./archive-entry";
 import { scanTarArchive } from "./archive-tar";
+import { scanSevenZipArchive } from "./archive-seven-zip";
 import { scanZipArchive } from "./archive-zip";
 
 const ZIP_EXTENSIONS = ["zip", "jar", "apk"];
 const ZIP_MIMES = ["application/zip", "application/x-zip-compressed", "application/java-archive"];
 const TAR_MIMES = ["application/x-tar"];
 const TAR_GZIP_MIMES = ["application/x-compressed-tar", "application/x-tgz"];
+const SEVEN_ZIP_MIMES = ["application/x-7z-compressed"];
 
 const DEFAULT_MAX_ENTRIES = 10_000;
 const DEFAULT_MAX_TOTAL_UNCOMPRESSED = 100 * 1024 * 1024;
 const DEFAULT_MAX_RATIO = 100;
 
-type ArchiveFormat = "zip" | "tar" | "tar-gzip";
+type ArchiveFormat = "zip" | "tar" | "tar-gzip" | "7z";
 
 export class ArchiveScanner implements Scanner {
   readonly name = "archive";
@@ -49,6 +51,8 @@ export class ArchiveScanner implements Scanner {
         return scanTarArchive(buffer, false, this.options);
       case "tar-gzip":
         return scanTarArchive(buffer, true, this.options);
+      case "7z":
+        return scanSevenZipArchive(buffer, this.options);
     }
   }
 }
@@ -75,6 +79,7 @@ function formatFromExtension(extension: string | undefined): ArchiveFormat | und
   if (ZIP_EXTENSIONS.includes(normalized)) return "zip";
   if (normalized === "tar") return "tar";
   if (normalized === "tar.gz" || normalized === "tgz") return "tar-gzip";
+  if (normalized === "7z") return "7z";
   return undefined;
 }
 
@@ -84,5 +89,6 @@ function formatFromMime(mime: string | undefined): ArchiveFormat | undefined {
   if (ZIP_MIMES.includes(normalized)) return "zip";
   if (TAR_MIMES.includes(normalized)) return "tar";
   if (TAR_GZIP_MIMES.includes(normalized)) return "tar-gzip";
+  if (SEVEN_ZIP_MIMES.includes(normalized)) return "7z";
   return undefined;
 }

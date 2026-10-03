@@ -181,18 +181,18 @@ This limit bounds the aggregated `ScanResult`, not memory allocated inside a cus
 
 | Area                       | Description                                                          |
 | -------------------------- | -------------------------------------------------------------------- |
-| **Unsafe archive paths**   | ZIP and TAR entry names that leave the extract directory             |
+| **Unsafe archive paths**   | ZIP, TAR, and 7z entry names that leave the extract directory        |
 | **Archive size limits**    | Too many entries, huge uncompressed size, extreme compression ratios |
-| **Encrypted ZIP entries**  | Password-protected ZIP payloads that cannot be inspected             |
+| **Encrypted entries**      | Password-protected ZIP and 7z payloads that cannot be inspected      |
 | **MIME mismatches**        | Extension or declared MIME disagrees with file signature             |
 | **Risky CSV/TSV cells**    | Cells that start with characters office apps may treat specially     |
-| **Unsafe archive entries** | Absolute paths, link entries, and suspicious names in ZIP and TAR    |
+| **Unsafe archive entries** | Absolute paths, link entries, and suspicious names in archives       |
 | **Metadata anomalies**     | Double extensions, executable extensions on “documents”              |
 | **Polyglot files**         | One buffer that looks like more than one format (e.g. image+ZIP)     |
 
 ### Archive formats
 
-ZIP-family containers are parsed with [`yauzl`](https://github.com/thejoshwolfe/yauzl). TAR containers are parsed in memory with [`modern-tar`](https://github.com/ayuhito/modern-tar):
+ZIP-family containers are parsed with [`yauzl`](https://github.com/thejoshwolfe/yauzl), TAR containers with [`modern-tar`](https://github.com/ayuhito/modern-tar), and 7z metadata with [`7z-wasm`](https://github.com/use-strict/7z-wasm):
 
 | Format                              | Entry inspection | Notes                                                                    |
 | ----------------------------------- | ---------------- | ------------------------------------------------------------------------ |
@@ -200,11 +200,13 @@ ZIP-family containers are parsed with [`yauzl`](https://github.com/thejoshwolfe/
 | JAR, APK                            | Yes              | Treated as ZIP (`.jar` / `.apk` or ZIP MIME)                             |
 | Office ZIP (`docx`, `xlsx`, `pptx`) | No               | Detected as office documents, not opened as ZIP                          |
 | tar, tar.gz, tgz                    | Yes              | Paths, entry/size limits, links; aggregate ratio for gzip variants       |
-| 7z                                  | No               | Not parsed ([#30](https://github.com/Ramzi-Abidi/fileBouncer/issues/30)) |
+| 7z                                  | Yes              | Paths, links, encryption, entry/size limits, aggregate ratio             |
 | RAR                                 | No               | Not parsed ([#31](https://github.com/Ramzi-Abidi/fileBouncer/issues/31)) |
 | Nested archives                     | No               | `archive.maxDepth` is accepted but recursion is not implemented          |
 
-A non-ZIP file named `.zip` and a non-TAR file named `.tar`, `.tar.gz`, or `.tgz` are handed to the claimed parser and **fail closed** (`CORRUPT_ARCHIVE`). Generic gzip streams (`.gz`) are not treated as TAR. Office ZIP documents are not opened by the archive scanner.
+A non-ZIP file named `.zip`, non-TAR file named `.tar`, `.tar.gz`, or `.tgz`, and non-7z file named `.7z` are handed to the claimed parser and **fail closed** (`CORRUPT_ARCHIVE`). Generic gzip streams (`.gz`) are not treated as TAR. Office ZIP documents are not opened by the archive scanner.
+
+7z inspection runs the metadata-only `7z l -slt` command in an isolated worker; file payloads are not extracted. Listing has a 30-second hard timeout and stops once entry, declared-size, or aggregate-ratio limits are reached. Worker V8 heaps are constrained, but those limits do not cover WebAssembly linear memory; the engine-level `maxFileSize` remains the primary input-memory bound.
 
 ### What it does **not** detect
 
@@ -402,7 +404,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and PR guidelines.
 - [x] Polyglot scanner
 - [x] CLI (`filebouncer` / `npx @filebouncer/core`)
 - [x] tar / tar.gz / tgz archive scanning
-- [ ] 7z archive scanning
+- [x] 7z archive scanning
 - [ ] RAR archive scanning
 - [ ] Express & Fastify middleware
 - [ ] Stable `v1.0.0` API
