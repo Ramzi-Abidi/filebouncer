@@ -10,12 +10,13 @@ const ZIP_MIMES = ["application/zip", "application/x-zip-compressed", "applicati
 const TAR_MIMES = ["application/x-tar"];
 const TAR_GZIP_MIMES = ["application/x-compressed-tar", "application/x-tgz"];
 const SEVEN_ZIP_MIMES = ["application/x-7z-compressed"];
+const RAR_MIMES = ["application/x-rar-compressed", "application/vnd.rar"];
 
 const DEFAULT_MAX_ENTRIES = 10_000;
 const DEFAULT_MAX_TOTAL_UNCOMPRESSED = 100 * 1024 * 1024;
 const DEFAULT_MAX_RATIO = 100;
 
-type ArchiveFormat = "zip" | "tar" | "tar-gzip" | "7z";
+type ArchiveFormat = "zip" | "tar" | "tar-gzip" | "7z" | "rar";
 
 export class ArchiveScanner implements Scanner {
   readonly name = "archive";
@@ -38,6 +39,13 @@ export class ArchiveScanner implements Scanner {
   async scan(ctx: ScannerContext): Promise<Threat[]> {
     const format = resolveArchiveFormat(ctx);
     if (format === undefined) return [];
+
+    if (format === "rar") {
+      throw new ScanFailureError(
+        "UNSUPPORTED_ARCHIVE",
+        "RAR archives are recognized but entry inspection is not supported",
+      );
+    }
 
     const buffer = await ctx.read();
     if (buffer.length === 0) {
@@ -80,6 +88,7 @@ function formatFromExtension(extension: string | undefined): ArchiveFormat | und
   if (normalized === "tar") return "tar";
   if (normalized === "tar.gz" || normalized === "tgz") return "tar-gzip";
   if (normalized === "7z") return "7z";
+  if (normalized === "rar") return "rar";
   return undefined;
 }
 
@@ -90,5 +99,6 @@ function formatFromMime(mime: string | undefined): ArchiveFormat | undefined {
   if (TAR_MIMES.includes(normalized)) return "tar";
   if (TAR_GZIP_MIMES.includes(normalized)) return "tar-gzip";
   if (SEVEN_ZIP_MIMES.includes(normalized)) return "7z";
+  if (RAR_MIMES.includes(normalized)) return "rar";
   return undefined;
 }

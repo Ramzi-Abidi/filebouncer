@@ -194,17 +194,17 @@ This limit bounds the aggregated `ScanResult`, not memory allocated inside a cus
 
 ZIP-family containers are parsed with [`yauzl`](https://github.com/thejoshwolfe/yauzl), TAR containers with [`modern-tar`](https://github.com/ayuhito/modern-tar), and 7z metadata with [`7z-wasm`](https://github.com/use-strict/7z-wasm):
 
-| Format                              | Entry inspection | Notes                                                                    |
-| ----------------------------------- | ---------------- | ------------------------------------------------------------------------ |
-| ZIP                                 | Yes              | Paths, size/ratio limits, encryption, symlinks                           |
-| JAR, APK                            | Yes              | Treated as ZIP (`.jar` / `.apk` or ZIP MIME)                             |
-| Office ZIP (`docx`, `xlsx`, `pptx`) | No               | Detected as office documents, not opened as ZIP                          |
-| tar, tar.gz, tgz                    | Yes              | Paths, entry/size limits, links; aggregate ratio for gzip variants       |
-| 7z                                  | Yes              | Paths, links, encryption, entry/size limits, aggregate ratio             |
-| RAR                                 | No               | Not parsed ([#31](https://github.com/Ramzi-Abidi/fileBouncer/issues/31)) |
-| Nested archives                     | No               | `archive.maxDepth` is accepted but recursion is not implemented          |
+| Format                              | Entry inspection | Notes                                                              |
+| ----------------------------------- | ---------------- | ------------------------------------------------------------------ |
+| ZIP                                 | Yes              | Paths, size/ratio limits, encryption, symlinks                     |
+| JAR, APK                            | Yes              | Treated as ZIP (`.jar` / `.apk` or ZIP MIME)                       |
+| Office ZIP (`docx`, `xlsx`, `pptx`) | No               | Detected as office documents, not opened as ZIP                    |
+| tar, tar.gz, tgz                    | Yes              | Paths, entry/size limits, links; aggregate ratio for gzip variants |
+| 7z                                  | Yes              | Paths, links, encryption, entry/size limits, aggregate ratio       |
+| RAR                                 | No               | RAR4/RAR5 are recognized and rejected with `UNSUPPORTED_ARCHIVE`   |
+| Nested archives                     | No               | `archive.maxDepth` is accepted but recursion is not implemented    |
 
-A non-ZIP file named `.zip`, non-TAR file named `.tar`, `.tar.gz`, or `.tgz`, and non-7z file named `.7z` are handed to the claimed parser and **fail closed** (`CORRUPT_ARCHIVE`). Generic gzip streams (`.gz`) are not treated as TAR. Office ZIP documents are not opened by the archive scanner.
+A non-ZIP file named `.zip`, non-TAR file named `.tar`, `.tar.gz`, or `.tgz`, and non-7z file named `.7z` are handed to the claimed parser and **fail closed** (`CORRUPT_ARCHIVE`). Files identified or declared as RAR fail closed with `UNSUPPORTED_ARCHIVE`; RAR entry metadata is not inspected. Generic gzip streams (`.gz`) are not treated as TAR. Office ZIP documents are not opened by the archive scanner.
 
 7z inspection runs the metadata-only `7z l -slt` command in an isolated worker; file payloads are not extracted. Listing has a 30-second hard timeout and stops once entry, declared-size, or aggregate-ratio limits are reached. Worker V8 heaps are constrained, but those limits do not cover WebAssembly linear memory; the engine-level `maxFileSize` remains the primary input-memory bound.
 
@@ -405,7 +405,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and PR guidelines.
 - [x] CLI (`filebouncer` / `npx @filebouncer/core`)
 - [x] tar / tar.gz / tgz archive scanning
 - [x] 7z archive scanning
-- [ ] RAR archive scanning
+- [x] RAR recognition / unsupported rejection
 - [ ] Express & Fastify middleware
 - [ ] Stable `v1.0.0` API
 
