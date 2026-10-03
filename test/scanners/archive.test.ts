@@ -9,6 +9,13 @@ import { ZipFile } from "yazl";
 
 import { FileSecurityEngine } from "../../src/engine/file-security-engine";
 
+function createRarSignature(version: 4 | 5): Buffer {
+  const signature =
+    version === 4
+      ? Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x00])
+      : Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x01, 0x00]);
+  return Buffer.concat([signature, Buffer.alloc(64)]);
+}
 const S_IFLNK = 0o120000;
 
 /** Minimal stored ZIP with an arbitrary entry name (yazl rejects unsafe paths). */
@@ -593,6 +600,63 @@ describe("archive scanner", () => {
     expect(result.errors).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ scanner: "archive", code: "CORRUPT_ARCHIVE" }),
+      ]),
+    );
+  });
+
+  it("recognizes RAR4 signatures and fails closed as unsupported", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const result = await engine.scan(createRarSignature(4));
+
+    expect(result).toMatchObject({
+      ok: false,
+      outcome: "incomplete",
+      verdict: "clean",
+      threats: [],
+      scannersRun: ["archive"],
+    });
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          scanner: "archive",
+          code: "UNSUPPORTED_ARCHIVE",
+          message: "RAR archives are recognized but entry inspection is not supported",
+        }),
+      ]),
+    );
+  });
+
+  it("recognizes RAR5 signatures and fails closed as unsupported", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const result = await engine.scan(createRarSignature(5));
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ scanner: "archive", code: "UNSUPPORTED_ARCHIVE" }),
+      ]),
+    );
+  });
+
+  it("rejects files claiming the rar extension", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const result = await engine.scan(Buffer.from("not-rar"), { filename: "upload.rar" });
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ scanner: "archive", code: "UNSUPPORTED_ARCHIVE" }),
+      ]),
+    );
+  });
+
+  it("rejects files declared with the standard RAR MIME", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["archive"] });
+    const result = await engine.scan(Buffer.from("not-rar"), {
+      declaredMime: "application/vnd.rar",
+    });
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ scanner: "archive", code: "UNSUPPORTED_ARCHIVE" }),
       ]),
     );
   });
