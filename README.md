@@ -179,32 +179,34 @@ This limit bounds the aggregated `ScanResult`, not memory allocated inside a cus
 
 ## What it checks
 
-| Area                       | Description                                                      |
-| -------------------------- | ---------------------------------------------------------------- |
-| **Unsafe archive paths**   | ZIP entry names that leave the extract directory                 |
-| **Archive size limits**    | Too many ZIP entries, huge uncompressed size, extreme ratios     |
-| **Encrypted ZIP entries**  | Password-protected ZIP payloads that cannot be inspected         |
-| **MIME mismatches**        | Extension or declared MIME disagrees with file signature         |
-| **Risky CSV/TSV cells**    | Cells that start with characters office apps may treat specially |
-| **Unsafe archive entries** | Absolute paths, link entries, suspicious names in ZIP            |
-| **Metadata anomalies**     | Double extensions, executable extensions on “documents”          |
-| **Polyglot files**         | One buffer that looks like more than one format (e.g. image+ZIP) |
+| Area                       | Description                                                          |
+| -------------------------- | -------------------------------------------------------------------- |
+| **Unsafe archive paths**   | ZIP, TAR, and 7z entry names that leave the extract directory        |
+| **Archive size limits**    | Too many entries, huge uncompressed size, extreme compression ratios |
+| **Encrypted entries**      | Password-protected ZIP and 7z payloads that cannot be inspected      |
+| **MIME mismatches**        | Extension or declared MIME disagrees with file signature             |
+| **Risky CSV/TSV cells**    | Cells that start with characters office apps may treat specially     |
+| **Unsafe archive entries** | Absolute paths, link entries, and suspicious names in archives       |
+| **Metadata anomalies**     | Double extensions, executable extensions on “documents”              |
+| **Polyglot files**         | One buffer that looks like more than one format (e.g. image+ZIP)     |
 
 ### Archive formats
 
-Entry inspection (paths, bombs, encryption, links) applies only to ZIP-family containers parsed with [`yauzl`](https://github.com/thejoshwolfe/yauzl):
+ZIP-family containers are parsed with [`yauzl`](https://github.com/thejoshwolfe/yauzl), TAR containers with [`modern-tar`](https://github.com/ayuhito/modern-tar), and 7z metadata with [`7z-wasm`](https://github.com/use-strict/7z-wasm):
 
-| Format                              | Entry inspection | Notes                                                                    |
-| ----------------------------------- | ---------------- | ------------------------------------------------------------------------ |
-| ZIP                                 | Yes              | Paths, size/ratio limits, encryption, symlinks                           |
-| JAR, APK                            | Yes              | Treated as ZIP (`.jar` / `.apk` or ZIP MIME)                             |
-| Office ZIP (`docx`, `xlsx`, `pptx`) | No               | Detected as office documents, not opened as ZIP                          |
-| tar, tar.gz, tgz                    | No               | Not parsed ([#29](https://github.com/Ramzi-Abidi/fileBouncer/issues/29)) |
-| 7z                                  | No               | Not parsed ([#30](https://github.com/Ramzi-Abidi/fileBouncer/issues/30)) |
-| RAR                                 | No               | Not parsed ([#31](https://github.com/Ramzi-Abidi/fileBouncer/issues/31)) |
-| Nested ZIP                          | No               | `archive.maxDepth` is stored but unused                                  |
+| Format                              | Entry inspection | Notes                                                              |
+| ----------------------------------- | ---------------- | ------------------------------------------------------------------ |
+| ZIP                                 | Yes              | Paths, size/ratio limits, encryption, symlinks                     |
+| JAR, APK                            | Yes              | Treated as ZIP (`.jar` / `.apk` or ZIP MIME)                       |
+| Office ZIP (`docx`, `xlsx`, `pptx`) | No               | Detected as office documents, not opened as ZIP                    |
+| tar, tar.gz, tgz                    | Yes              | Paths, entry/size limits, links; aggregate ratio for gzip variants |
+| 7z                                  | Yes              | Paths, links, encryption, entry/size limits, aggregate ratio       |
+| RAR                                 | No               | RAR4/RAR5 are recognized and rejected with `UNSUPPORTED_ARCHIVE`   |
+| Nested archives                     | No               | `archive.maxDepth` is accepted but recursion is not implemented    |
 
-A non-ZIP file named `.zip` is still handed to the ZIP parser and **fails closed** (`CORRUPT_ARCHIVE`). A `.tar` is not opened by the archive scanner; MIME / metadata / polyglot may still run.
+A non-ZIP file named `.zip`, non-TAR file named `.tar`, `.tar.gz`, or `.tgz`, and non-7z file named `.7z` are handed to the claimed parser and **fail closed** (`CORRUPT_ARCHIVE`). Files identified or declared as RAR fail closed with `UNSUPPORTED_ARCHIVE`; RAR entry metadata is not inspected. Generic gzip streams (`.gz`) are not treated as TAR. Office ZIP documents are not opened by the archive scanner.
+
+7z inspection runs the metadata-only `7z l -slt` command in an isolated worker; file payloads are not extracted. Listing has a 30-second hard timeout and stops once entry, declared-size, or aggregate-ratio limits are reached. Worker V8 heaps are constrained, but those limits do not cover WebAssembly linear memory; the engine-level `maxFileSize` remains the primary input-memory bound.
 
 ### What it does **not** detect
 
@@ -401,9 +403,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and PR guidelines.
 - [x] First npm release
 - [x] Polyglot scanner
 - [x] CLI (`filebouncer` / `npx @filebouncer/core`)
-- [ ] tar / tar.gz / tgz archive scanning
-- [ ] 7z archive scanning
-- [ ] RAR archive scanning
+- [x] tar / tar.gz / tgz archive scanning
+- [x] 7z archive scanning
+- [x] RAR recognition / unsupported rejection
 - [ ] Express & Fastify middleware
 - [ ] Stable `v1.0.0` API
 

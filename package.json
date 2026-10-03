@@ -59,7 +59,9 @@
     "access": "public"
   },
   "dependencies": {
+    "7z-wasm": "1.2.0",
     "file-type": "^21.0.0",
+    "modern-tar": "^0.8.5",
     "yauzl": "^3.4.0"
   },
   "devDependencies": {
