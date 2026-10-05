@@ -328,6 +328,77 @@ parseExtension(".bashrc"); // undefined
 
 ---
 
+## Configuration
+
+Pass options to `new FileSecurityEngine(config)`. All fields are optional.
+
+### Engine
+
+| Option           | Type                              | Default             | Description                                                                                                                 |
+| :--------------- | :-------------------------------- | :------------------ | :-------------------------------------------------------------------------------------------------------------------------- |
+| `scanners`       | `BuiltInScannerName[]` \| `"all"` | `"all"`             | Built-in scanners to enable. Omit or pass `"all"` to run every built-in. Pass `[]` to run only `customScanners`.            |
+| `maxFileSize`    | `number`                          | `52428800` (50 MiB) | Hard upper bound on input size in bytes. Inputs larger than this are rejected before scanning.                              |
+| `blockThreshold` | `Severity`                        | `"high"`            | Threats at or above this severity flip `result.ok` to `false`.                                                              |
+| `failFast`       | `boolean`                         | `false`             | Stop the pipeline at the first `critical` finding. See [Scan budgets and early stopping](#scan-budgets-and-early-stopping). |
+| `timeoutMs`      | `number`                          | none                | Overall scan budget in milliseconds. See [Scan budgets and early stopping](#scan-budgets-and-early-stopping).               |
+| `customScanners` | `Scanner[]`                       | `[]`                | User-supplied scanners run alongside the built-ins. See [Custom scanner](#custom-scanner).                                  |
+
+### `mime`
+
+| Option      | Type       | Default | Description                                                              |
+| :---------- | :--------- | :------ | :----------------------------------------------------------------------- |
+| `allowList` | `string[]` | none    | If set, only these MIME types are accepted; all others produce a threat. |
+| `denyList`  | `string[]` | none    | MIME types that always produce a threat.                                 |
+| `strict`    | `boolean`  | `false` | Treat MIME mismatches as `critical` instead of `medium`.                 |
+
+### `metadata`
+
+| Option                 | Type       | Default   | Description                                                                                                                                          |
+| :--------------------- | :--------- | :-------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `denyExtensions`       | `string[]` | see below | Lowercased extensions (without dot) that always produce a threat. **Merged** with built-in defaults — you cannot remove the defaults via this field. |
+| `allowDoubleExtension` | `boolean`  | `false`   | Permit multiple dotted extensions such as `.tar.gz`.                                                                                                 |
+
+Built-in denied extensions: `exe`, `scr`, `bat`, `cmd`, `com`, `pif`, `msi`, `vbs`, `js`, `jse`, `wsh`, `ps1`, `dll`, `reg`, `inf`.
+
+### `csv`
+
+| Option      | Type       | Default                       | Description                                                                              |
+| :---------- | :--------- | :---------------------------- | :--------------------------------------------------------------------------------------- |
+| `prefixes`  | `string[]` | `["=", "+", "@", "\t", "\r"]` | Cell value prefixes that trigger an unsafe-cell finding. Note: `-` is **not** a default. |
+| `maxRows`   | `number`   | `10000`                       | Stop scanning after this many rows. `0` = unlimited.                                     |
+| `delimiter` | `string`   | auto-detected                 | Field delimiter. Auto-detected from the first line if omitted.                           |
+
+### `archive`
+
+| Option                 | Type      | Default               | Description                                                            |
+| :--------------------- | :-------- | :-------------------- | :--------------------------------------------------------------------- |
+| `maxEntries`           | `number`  | `10000`               | Maximum number of entries before flagging a zip bomb.                  |
+| `maxTotalUncompressed` | `number`  | `104857600` (100 MiB) | Maximum total uncompressed size across all entries in bytes.           |
+| `maxRatio`             | `number`  | `100`                 | Maximum uncompressed:compressed ratio per entry and in aggregate.      |
+| `allowSymlinks`        | `boolean` | `false`               | Permit symlink entries inside archives.                                |
+| `maxDepth`             | —         | —                     | **Reserved / unused.** Nested archive scanning is not yet implemented. |
+
+### `polyglot`
+
+| Option               | Type     | Default     | Description                                                                                             |
+| :------------------- | :------- | :---------- | :------------------------------------------------------------------------------------------------------ |
+| `minSecondaryOffset` | `number` | `0`         | Ignore secondary format signatures whose byte offset is below this value.                               |
+| `maxScanBytes`       | `number` | full buffer | Maximum leading bytes to inspect for secondary signatures.                                              |
+| `trailingTolerance`  | `number` | `32`        | Allowed trailing bytes after a complete primary signature before flagging unexplained trailing content. |
+
+### Example
+
+```ts
+const engine = new FileSecurityEngine({
+  mime: { strict: true },
+  csv: { maxRows: 1000 },
+  archive: { maxRatio: 50, allowSymlinks: false },
+  metadata: { denyExtensions: ["hta", "vba"] },
+});
+```
+
+---
+
 ## Requirements
 
 - **Node.js** ≥ 20
