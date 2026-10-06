@@ -3,7 +3,15 @@ import { CsvScanner } from "../scanners/csv";
 import { MetadataScanner } from "../scanners/metadata";
 import { MimeScanner } from "../scanners/mime";
 import { PolyglotScanner } from "../scanners/polyglot";
-import type { EngineConfig, Scanner } from "../types";
+import type { BuiltInScannerName, EngineConfig, Scanner } from "../types";
+
+export const BUILT_IN_SCANNERS: readonly BuiltInScannerName[] = [
+  "mime",
+  "metadata",
+  "csv",
+  "archive",
+  "polyglot",
+];
 
 export const resolveBuiltInScanners = (config: EngineConfig): Scanner[] => {
   const selected = config.scanners ?? "all";

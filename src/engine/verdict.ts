@@ -1,6 +1,6 @@
 import type { Severity, Verdict } from "../types";
 
-const SEVERITY_ORDER: Severity[] = ["info", "low", "medium", "high", "critical"];
+export const SEVERITY_ORDER: readonly Severity[] = ["info", "low", "medium", "high", "critical"];
 
 const severityRank = (severity: Severity): number => SEVERITY_ORDER.indexOf(severity);
 

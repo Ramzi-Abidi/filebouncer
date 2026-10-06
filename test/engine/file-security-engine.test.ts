@@ -7,7 +7,7 @@ import {
   ScanFailureError,
   scanBuffer,
 } from "../../src";
-import type { Scanner, ScanOutcome, Severity, Threat } from "../../src";
+import type { EngineConfig, Scanner, ScanOutcome, Severity, Threat } from "../../src";
 
 const BUILT_IN_SCANNERS = ["mime", "metadata", "csv", "archive", "polyglot"];
 
@@ -282,7 +282,7 @@ describe("FileSecurityEngine", () => {
   it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
     "rejects invalid maxFindings value %s",
     (maxFindings) => {
-      expect(() => new FileSecurityEngine({ maxFindings })).toThrowError(FileBouncerError);
+      expect(() => new FileSecurityEngine({ maxFindings })).toThrow(FileBouncerError);
     },
   );
 
@@ -463,5 +463,193 @@ describe("FileSecurityEngine", () => {
 
     expect(result.scannersRun).toEqual([]);
     expect(result.scannersSkipped).toEqual([]);
+  });
+
+  describe("configuration validation and state isolation", () => {
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, -1])(
+      "rejects invalid maxFileSize value %s",
+      (maxFileSize) => {
+        expect(() => new FileSecurityEngine({ maxFileSize })).toThrow(FileBouncerError);
+      },
+    );
+
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, -100])(
+      "rejects invalid timeoutMs value %s",
+      (timeoutMs) => {
+        expect(() => new FileSecurityEngine({ timeoutMs })).toThrow(FileBouncerError);
+      },
+    );
+
+    it("rejects invalid blockThreshold", () => {
+      expect(
+        () =>
+          new FileSecurityEngine({
+            blockThreshold: "super-critical",
+          } as unknown as EngineConfig),
+      ).toThrow(FileBouncerError);
+    });
+
+    it("rejects invalid built-in scanner names", () => {
+      expect(
+        () =>
+          new FileSecurityEngine({
+            scanners: ["unknown-scanner"],
+          } as unknown as EngineConfig),
+      ).toThrow(FileBouncerError);
+      expect(
+        () =>
+          new FileSecurityEngine({
+            scanners: 123,
+          } as unknown as EngineConfig),
+      ).toThrow(FileBouncerError);
+    });
+
+    it("rejects invalid scanner limits with FileBouncerError", () => {
+      expect(
+        () =>
+          new FileSecurityEngine({
+            csv: { maxRows: Number.NaN },
+          }),
+      ).toThrow(FileBouncerError);
+      expect(
+        () =>
+          new FileSecurityEngine({
+            csv: { maxRows: -1 },
+          }),
+      ).toThrow(FileBouncerError);
+      expect(
+        () =>
+          new FileSecurityEngine({
+            csv: { maxRows: 1.5 },
+          }),
+      ).toThrow(FileBouncerError);
+
+      expect(
+        () =>
+          new FileSecurityEngine({
+            archive: { maxEntries: -1 },
+          }),
+      ).toThrow(FileBouncerError);
+      expect(
+        () =>
+          new FileSecurityEngine({
+            archive: { maxEntries: Number.NaN },
+          }),
+      ).toThrow(FileBouncerError);
+      expect(
+        () =>
+          new FileSecurityEngine({
+            archive: { maxTotalUncompressed: -1 },
+          }),
+      ).toThrow(FileBouncerError);
+      expect(
+        () =>
+          new FileSecurityEngine({
+            archive: { maxRatio: -1 },
+          }),
+      ).toThrow(FileBouncerError);
+      expect(
+        () =>
+          new FileSecurityEngine({
+            archive: { maxDepth: -1 },
+          }),
+      ).toThrow(FileBouncerError);
+
+      expect(
+        () =>
+          new FileSecurityEngine({
+            polyglot: { minSecondaryOffset: -1 },
+          }),
+      ).toThrow(FileBouncerError);
+      expect(
+        () =>
+          new FileSecurityEngine({
+            polyglot: { maxScanBytes: -1 },
+          }),
+      ).toThrow(FileBouncerError);
+      expect(
+        () =>
+          new FileSecurityEngine({
+            polyglot: { trailingTolerance: -1 },
+          }),
+      ).toThrow(FileBouncerError);
+    });
+
+    it("isolates config against external mutation", async () => {
+      const config = {
+        maxFileSize: 10,
+        scanners: [] as ("mime" | "metadata" | "csv" | "archive" | "polyglot")[],
+      };
+
+      const engine = new FileSecurityEngine(config);
+      config.maxFileSize = 1000;
+      config.scanners.push("mime");
+
+      const result = await engine.scan(Buffer.alloc(11));
+      expect(result.ok).toBe(false);
+      expect(result.threats).toEqual([expect.objectContaining({ code: "FILE_TOO_LARGE" })]);
+      expect(result.scannersRun).toEqual([]);
+    });
+
+    it("keeps CSV protection after the caller clears prefixes in a shallow-frozen config", async () => {
+      const prefixes = ["="];
+      const config: EngineConfig = Object.freeze({
+        scanners: ["csv"],
+        csv: { prefixes },
+      } satisfies EngineConfig);
+      const engine = new FileSecurityEngine(config);
+      const file = Buffer.from("=1+1");
+
+      const before = await engine.scan(file, { filename: "upload.csv" });
+      expect(before.outcome).toBe("blocked");
+      expect(before.threats).toEqual(
+        expect.arrayContaining([expect.objectContaining({ code: "CSV_UNSAFE_CELL" })]),
+      );
+
+      // Freezing config does not freeze this nested, caller-owned array.
+      prefixes.length = 0;
+
+      const after = await engine.scan(file, { filename: "upload.csv" });
+      expect(after.errors).toEqual([]);
+      expect(after.outcome).toBe("blocked");
+      expect(after.threats).toEqual(
+        expect.arrayContaining([expect.objectContaining({ code: "CSV_UNSAFE_CELL" })]),
+      );
+    });
+
+    it("snapshots scanners so use() during an active scan does not affect the in-flight scan", async () => {
+      const lateScanner: Scanner = {
+        name: "late-scanner",
+        appliesTo: () => true,
+        scan: async () => [makeThreat(1, "low")],
+      };
+
+      const engineRef: { current?: FileSecurityEngine } = {};
+
+      const slowScanner: Scanner = {
+        name: "slow-scanner",
+        appliesTo: () => true,
+        scan: async () => {
+          engineRef.current?.use(lateScanner);
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          return [];
+        },
+      };
+
+      const engine = new FileSecurityEngine({
+        scanners: [],
+        customScanners: [slowScanner],
+      });
+      engineRef.current = engine;
+
+      const result = await engine.scan(EMPTY, { filename: "test.txt" });
+
+      expect(result.scannersRun).toEqual(["slow-scanner"]);
+      expect(result.threats).toEqual([]);
+
+      const nextResult = await engine.scan(EMPTY, { filename: "test.txt" });
+      expect(nextResult.scannersRun).toContain("late-scanner");
+      expect(nextResult.threats.length).toBe(1);
+    });
   });
 });
