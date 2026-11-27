@@ -5,6 +5,22 @@ const DEFAULT_TRAILING_TOLERANCE = 32;
 const ZIP_EOCD_WINDOW = 22 + 65_535;
 
 const ZIP_FAMILIES = new Set(["zip"]);
+/**
+ * Formats whose job is to hold other files. A PDF stored inside one is normal
+ * content, not a hidden second format, unless it sits where PDF readers look
+ * for the header: Acrobat and pdf.js accept `%PDF-` within the first 1024 bytes.
+ */
+const CONTAINER_MIMES = new Set([
+  "application/x-tar",
+  "application/gzip",
+  "application/x-7z-compressed",
+  "application/x-rar-compressed",
+  "application/vnd.rar",
+  "application/x-cfb",
+  "application/x-msi",
+]);
+const PDF_HEADER_WINDOW = 1024;
+const PDF_MARKER = Buffer.from("%PDF-");
 const ZIP_CONTAINER_EXTENSIONS = new Set([
   "zip",
   "jar",
@@ -96,6 +112,30 @@ const MAGIC_RULES: {
   },
 ];
 
+const JPEG_SOI = 0xd8;
+const JPEG_EOI = 0xd9;
+const JPEG_SOS = 0xda;
+
+/** Markers that carry no length field: TEM (0x01) and restart markers RST0–RST7. */
+const isStandaloneJpegMarker = (marker: number): boolean =>
+  marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7);
+
+/**
+ * Skip over entropy-coded image data that follows a start-of-scan header.
+ * Inside it, a literal 0xFF byte is written as `FF 00` and restart markers
+ * (`FF D0`–`FF D7`) may appear; any other `FF xx` is the next real marker.
+ * Returns the offset of that marker, or `undefined` if the data is truncated.
+ */
+const findJpegScanEnd = (buffer: Buffer, start: number): number | undefined => {
+  for (let i = start; i < buffer.length - 1; i++) {
+    if (buffer[i] !== 0xff) continue;
+    const next = buffer[i + 1]!;
+    if (next === 0x00 || next === 0xff || isStandaloneJpegMarker(next)) continue;
+    return i;
+  }
+  return undefined;
+};
+
 const makeHit = (family: string, mime: string, offset: number, evidence: string): FormatHit => ({
   family,
   mime,
@@ -129,7 +169,7 @@ export class PolyglotScanner implements Scanner {
     const slice = buffer.subarray(0, scanLength);
 
     const primary = this.resolvePrimary(ctx, slice);
-    const secondary = this.findSecondaryFormats(slice, buffer.length, primary?.family);
+    const secondary = this.findSecondaryFormats(slice, buffer.length, primary);
 
     const distinctSecondaries = secondary.filter((hit) => {
       if (hit.offset < this.options.minSecondaryOffset) return false;
@@ -197,9 +237,10 @@ export class PolyglotScanner implements Scanner {
   private findSecondaryFormats(
     slice: Buffer,
     fullLength: number,
-    primaryFamily: string | undefined,
+    primary: FormatHit | undefined,
   ): FormatHit[] {
     const hits: FormatHit[] = [];
+    const primaryFamily = primary?.family;
 
     if (!primaryFamily || !ZIP_FAMILIES.has(primaryFamily)) {
       const zip = this.findZipStructure(slice, fullLength);
@@ -207,7 +248,12 @@ export class PolyglotScanner implements Scanner {
     }
 
     if (primaryFamily !== "pdf") {
-      const pdf = this.findPdfMarker(slice);
+      const isContainer =
+        primary !== undefined &&
+        (ZIP_FAMILIES.has(primary.family) || CONTAINER_MIMES.has(primary.mime));
+      const pdf = this.findPdfMarker(
+        isContainer ? slice.subarray(0, PDF_HEADER_WINDOW + PDF_MARKER.length) : slice,
+      );
       if (pdf) hits.push(pdf);
     }
 
@@ -249,8 +295,7 @@ export class PolyglotScanner implements Scanner {
 
   private findPdfMarker(slice: Buffer): FormatHit | undefined {
     // Skip offset 0 — that would be the primary type, not a secondary face.
-    const marker = Buffer.from("%PDF-");
-    const index = slice.indexOf(marker, 1);
+    const index = slice.indexOf(PDF_MARKER, 1);
     if (index < 0) return undefined;
 
     return makeHit("pdf", "application/pdf", index, "pdf-header");
@@ -279,12 +324,42 @@ export class PolyglotScanner implements Scanner {
     return undefined;
   }
 
+  /**
+   * Walk the JPEG segment by segment to find the real end-of-image (EOI) marker.
+   *
+   * A naive search for the first `FF D9` is wrong: camera photos embed a full
+   * thumbnail JPEG inside the EXIF segment, and that thumbnail has its own EOI.
+   * Jumping over each segment by its declared length skips such nested data.
+   *
+   * Returns the offset just past the EOI, or `undefined` if the structure is
+   * malformed or truncated.
+   */
   private findJpegEndOffset(buffer: Buffer): number | undefined {
     if (buffer.length < 4 || buffer[0] !== 0xff || buffer[1] !== 0xd8) return undefined;
 
-    for (let i = 2; i < buffer.length - 1; i++) {
-      if (buffer[i] === 0xff && buffer[i + 1] === 0xd9) {
-        return i + 2;
+    let i = 2;
+    while (i < buffer.length) {
+      if (buffer[i] !== 0xff) return undefined;
+      // Any number of 0xFF fill bytes may precede a marker.
+      while (i < buffer.length && buffer[i] === 0xff) i++;
+      if (i >= buffer.length) return undefined;
+
+      const marker = buffer[i]!;
+      i++;
+
+      if (marker === JPEG_EOI) return i;
+      if (isStandaloneJpegMarker(marker)) continue;
+      if (marker === 0x00 || marker === JPEG_SOI) return undefined;
+
+      if (i + 2 > buffer.length) return undefined;
+      const segmentLength = buffer.readUInt16BE(i);
+      if (segmentLength < 2) return undefined;
+      i += segmentLength;
+
+      if (marker === JPEG_SOS) {
+        const scanEnd = findJpegScanEnd(buffer, i);
+        if (scanEnd === undefined) return undefined;
+        i = scanEnd;
       }
     }
 

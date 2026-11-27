@@ -1,6 +1,17 @@
 import type { CsvConfig, Scanner, ScannerContext, Threat } from "../types";
 
-const DEFAULT_PREFIXES = ["=", "+", "@", "\t", "\r"];
+/** Leading characters that always make a spreadsheet treat a cell as a formula. */
+const ALWAYS_UNSAFE_PREFIXES = ["=", "\t", "\r"];
+/**
+ * Leading characters that *can* start a formula but also start ordinary data:
+ * phone numbers (`+49 30 1234567`), negative numbers (`-1.5`), handles (`@anna`).
+ * By default these are only flagged when the cell also looks like a formula.
+ */
+const AMBIGUOUS_PREFIXES = ["+", "-", "@"];
+/** Numbers, phone numbers, dates: digits with spacing, grouping and sign characters only. */
+const NUMBER_LIKE = /^[+-]?[\d\s().,/-]*$/;
+/** Function call `(`, sheet/DDE reference `!`, or DDE command pipe `|`. */
+const FORMULA_SYNTAX = /[(!|]/;
 const DEFAULT_MAX_ROWS = 10_000;
 
 const CSV_EXTENSIONS = ["csv", "tsv"];
@@ -9,12 +20,12 @@ const CSV_MIMES = ["text/csv", "application/csv", "text/tab-separated-values"];
 export class CsvScanner implements Scanner {
   readonly name = "csv";
 
-  private readonly prefixes: string[];
+  private readonly prefixes: string[] | undefined;
   private readonly maxRows: number;
   private readonly delimiter: string | undefined;
 
   constructor(private readonly config: CsvConfig = {}) {
-    this.prefixes = config.prefixes ?? DEFAULT_PREFIXES;
+    this.prefixes = config.prefixes;
     this.maxRows = config.maxRows ?? DEFAULT_MAX_ROWS;
     this.delimiter = config.delimiter;
   }
@@ -68,6 +79,8 @@ export class CsvScanner implements Scanner {
   }
 
   private matchingPrefix(cell: string) {
+    if (this.prefixes === undefined) return CsvScanner.defaultMatchingPrefix(cell);
+
     for (const prefix of this.prefixes) {
       if (prefix === "\t" || prefix === "\r") {
         if (cell.startsWith(prefix)) return prefix;
@@ -78,6 +91,19 @@ export class CsvScanner implements Scanner {
     }
 
     return undefined;
+  }
+
+  /** Default policy: flag formulas, not phone numbers, negative numbers or @handles. */
+  private static defaultMatchingPrefix(cell: string) {
+    if (cell.startsWith("\t") || cell.startsWith("\r")) return cell[0];
+
+    const trimmed = cell.trimStart();
+    const first = trimmed[0];
+    if (first === undefined) return undefined;
+    if (ALWAYS_UNSAFE_PREFIXES.includes(first)) return first;
+    if (!AMBIGUOUS_PREFIXES.includes(first)) return undefined;
+    if (NUMBER_LIKE.test(trimmed)) return undefined;
+    return FORMULA_SYNTAX.test(trimmed) ? first : undefined;
   }
 
   private static isCsvMime(mime: string) {

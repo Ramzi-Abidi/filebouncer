@@ -190,6 +190,12 @@ This limit bounds the aggregated `ScanResult`, not memory allocated inside a cus
 | **Metadata anomalies**     | Double extensions, executable extensions on “documents”              |
 | **Polyglot files**         | One buffer that looks like more than one format (e.g. image+ZIP)     |
 
+### Polyglot PDF detection
+
+The polyglot scanner treats a `%PDF-` header after the start of a non-PDF file as a possible PDF face. This is a heuristic: it does not validate the PDF structure or confirm that a particular reader can open the whole file as a PDF. The resulting `POLYGLOT_DETECTED` finding is `high` severity and blocks at the default threshold.
+
+For container formats (ZIP and ZIP-based Office/OpenDocument files, TAR, gzip, 7z, RAR, and legacy Office/CFB files), only a `%PDF-` header within the **first 1024 bytes** is flagged. That is where PDF readers such as Acrobat and pdf.js look for the header, so a container that can be opened as a PDF is still blocked. A PDF stored deeper inside a container is ordinary content and is not flagged. For all other formats (e.g. a JPEG with a PDF appended), a `%PDF-` header anywhere in the file is flagged.
+
 ### Archive formats
 
 ZIP-family containers are parsed with [`yauzl`](https://github.com/thejoshwolfe/yauzl), TAR containers with [`modern-tar`](https://github.com/ayuhito/modern-tar), and 7z metadata with [`7z-wasm`](https://github.com/use-strict/7z-wasm):
@@ -351,6 +357,10 @@ Pass options to `new FileSecurityEngine(config)`. All fields are optional.
 | `denyList`  | `string[]` | none    | MIME types that always produce a threat.                                 |
 | `strict`    | `boolean`  | `false` | Treat MIME mismatches as `critical` instead of `medium`.                 |
 
+MIME comparisons understand common browser aliases (for example `application/x-zip-compressed` for ZIP on Windows, `image/jpg` and `image/pjpeg` for JPEG). A declared `application/octet-stream` is treated as "unknown", not as a mismatch. Legacy Office files (`.doc`, `.xls`, `.ppt`, `.msg`, ...) are accepted for their Office MIME types; Windows Installer packages that share the same container are detected as `application/x-msi` and still flagged.
+
+Text formats have no file signature. When `allowList` is set, a `.csv`, `.tsv`, `.txt`, `.json` or `.md` file is matched by its extension (`text/csv`, `text/tab-separated-values`, `text/plain`, `application/json`, `text/markdown`) only after confirming the content is genuine text (UTF-8, legacy 8-bit, or UTF-16 with a BOM) and not HTML, SVG, XML or PHP.
+
 ### `metadata`
 
 | Option                 | Type       | Default   | Description                                                                                                                                          |
@@ -362,11 +372,13 @@ Built-in denied extensions: `exe`, `scr`, `bat`, `cmd`, `com`, `pif`, `msi`, `vb
 
 ### `csv`
 
-| Option      | Type       | Default                       | Description                                                                              |
-| :---------- | :--------- | :---------------------------- | :--------------------------------------------------------------------------------------- |
-| `prefixes`  | `string[]` | `["=", "+", "@", "\t", "\r"]` | Cell value prefixes that trigger an unsafe-cell finding. Note: `-` is **not** a default. |
-| `maxRows`   | `number`   | `10000`                       | Stop scanning after this many rows. `0` = unlimited.                                     |
-| `delimiter` | `string`   | auto-detected                 | Field delimiter. Auto-detected from the first line if omitted.                           |
+| Option      | Type       | Default                   | Description                                                                                        |
+| :---------- | :--------- | :------------------------ | :------------------------------------------------------------------------------------------------- |
+| `prefixes`  | `string[]` | formula-aware (see below) | Cell value prefixes that trigger an unsafe-cell finding. Setting this disables the default policy. |
+| `maxRows`   | `number`   | `10000`                   | Stop scanning after this many rows. `0` = unlimited.                                               |
+| `delimiter` | `string`   | auto-detected             | Field delimiter. Auto-detected from the first line if omitted.                                     |
+
+By default, cells starting with `=`, a tab, or a carriage return are always flagged. Cells starting with `+`, `-` or `@` are flagged only when they also contain formula syntax (`(`, `!` or `|`) and are not number-like, so phone numbers (`+49 30 1234567`), negative numbers (`-1.5`) and handles (`@anna`) pass, while `-2+3+cmd|' /C calc'!A0` and `@SUM(1+1)` are flagged. Pass `prefixes` to flag every cell starting with the given characters instead.
 
 ### `archive`
 

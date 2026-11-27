@@ -1,14 +1,27 @@
 import type { MimeConfig, Scanner, ScannerContext, Severity, Threat } from "../types";
-
-const normalizeMime = (mime: string): string => mime.split(";")[0]!.trim().toLowerCase();
+import {
+  CFB_EXT,
+  LEGACY_OFFICE_EXTENSIONS,
+  canonicalMime,
+  isGenericMime,
+  mimeSatisfies,
+} from "../util/mime";
+import { inferTextMime } from "../util/text-type";
 
 const mismatchSeverity = (strict?: boolean): Severity => (strict ? "critical" : "medium");
 
-const EXTENSION_ALIASES = [new Set(["jpg", "jpeg"]), new Set(["tif", "tiff"])];
+const EXTENSION_ALIASES = [
+  new Set(["jpg", "jpeg", "jpe", "jfif"]),
+  new Set(["tif", "tiff"]),
+  new Set(["heic", "heif"]),
+  new Set(["mid", "midi"]),
+  new Set(["gz", "tgz"]),
+];
 
 const extensionsMatch = (extension: string, detectedExt: string): boolean =>
   extension === detectedExt ||
-  EXTENSION_ALIASES.some((aliases) => aliases.has(extension) && aliases.has(detectedExt));
+  EXTENSION_ALIASES.some((aliases) => aliases.has(extension) && aliases.has(detectedExt)) ||
+  (detectedExt === CFB_EXT && LEGACY_OFFICE_EXTENSIONS.has(extension));
 
 export class MimeScanner implements Scanner {
   readonly name = "mime";
@@ -21,15 +34,15 @@ export class MimeScanner implements Scanner {
     return false;
   }
 
-  scan(ctx: ScannerContext) {
+  async scan(ctx: ScannerContext) {
     const threats: Threat[] = [];
 
     this.checkDenyList(ctx, threats);
-    this.checkAllowList(ctx, threats);
+    await this.checkAllowList(ctx, threats);
     this.checkExtensionMismatch(ctx, threats);
     this.checkDeclaredMimeMismatch(ctx, threats);
 
-    return Promise.resolve(threats);
+    return threats;
   }
 
   private checkDenyList(ctx: ScannerContext, threats: Threat[]) {
@@ -37,7 +50,7 @@ export class MimeScanner implements Scanner {
     if (!detectedMime) return;
 
     const denied = this.config.denyList?.some(
-      (m) => normalizeMime(m) === normalizeMime(detectedMime),
+      (m) => canonicalMime(m) === canonicalMime(detectedMime),
     );
     if (!denied) return;
 
@@ -50,13 +63,15 @@ export class MimeScanner implements Scanner {
     );
   }
 
-  private checkAllowList(ctx: ScannerContext, threats: Threat[]) {
-    if (!this.config.allowList?.length) return;
+  private async checkAllowList(ctx: ScannerContext, threats: Threat[]) {
+    const { allowList } = this.config;
+    if (!allowList?.length) return;
 
-    const { detectedMime } = ctx;
+    // Text formats (CSV, TXT, JSON...) have no signature; fall back to
+    // verifying the bytes are genuine text matching the filename extension.
+    const effectiveMime = ctx.detectedMime ?? inferTextMime(await ctx.read(), ctx.extension);
     const allowed =
-      detectedMime !== undefined &&
-      this.config.allowList.some((m) => normalizeMime(m) === normalizeMime(detectedMime));
+      effectiveMime !== undefined && allowList.some((m) => mimeSatisfies(m, effectiveMime));
 
     if (allowed) return;
 
@@ -64,9 +79,9 @@ export class MimeScanner implements Scanner {
       threats,
       "MIME_NOT_ALLOWED",
       "high",
-      detectedMime === undefined
+      effectiveMime === undefined
         ? "File type could not be detected and is not on the allow list"
-        : `Detected MIME type ${detectedMime} is not on the allow list`,
+        : `Detected MIME type ${effectiveMime} is not on the allow list`,
       ctx,
     );
   }
@@ -87,7 +102,7 @@ export class MimeScanner implements Scanner {
   private checkDeclaredMimeMismatch(ctx: ScannerContext, threats: Threat[]) {
     const { declaredMime, detectedMime } = ctx;
     if (!declaredMime || !detectedMime) return;
-    if (normalizeMime(declaredMime) === normalizeMime(detectedMime)) return;
+    if (isGenericMime(declaredMime) || mimeSatisfies(declaredMime, detectedMime)) return;
 
     this.pushThreat(
       threats,
