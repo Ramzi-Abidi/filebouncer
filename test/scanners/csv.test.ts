@@ -141,4 +141,32 @@ describe("csv scanner", () => {
       ]),
     );
   });
+  it("does not flag phone numbers, negative numbers, placeholders or @handles", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["csv"] });
+    const result = await engine.scan(
+      csv(
+        [
+          "name,phone,balance,twitter,note",
+          "Anna,+49 30 1234567,-12.50,@anna,-",
+          'Bob,+1 (555) 123-4567,"-1,000.00",@bob_smith,+',
+          "Cara,+44-20-7946-0958,-0.5,@cara.dev,- buy milk",
+        ].join("\n"),
+      ),
+      { filename: "contacts.csv" },
+    );
+
+    expect(result.threats).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  it.each([
+    ["DDE payload behind a minus sign", "-2+3+cmd|' /C calc'!A0"],
+    ["function call behind a plus sign", '+HYPERLINK("http://evil.example","click")'],
+    ["sheet reference behind an @", "@Sheet1!A1"],
+  ])("flags a %s", async (_label, cell) => {
+    const engine = new FileSecurityEngine({ scanners: ["csv"] });
+    const result = await engine.scan(csv(`value\n${cell}`), { filename: "export.csv" });
+
+    expect(result.threats.map((threat) => threat.code)).toEqual(["CSV_UNSAFE_CELL"]);
+  });
 });

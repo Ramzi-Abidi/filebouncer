@@ -55,6 +55,28 @@ function createRawZip(fileName: string, data: Buffer = Buffer.from("x")): Buffer
   return Buffer.concat([localHeader, name, data, centralHeader, name, end]);
 }
 
+function createMinimalPdf(): Buffer {
+  const parts = ["%PDF-1.4\n"];
+  const offsets: number[] = [];
+  for (const object of [
+    "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+    "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+    "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>\nendobj\n",
+  ]) {
+    offsets.push(Buffer.byteLength(parts.join("")));
+    parts.push(object);
+  }
+
+  const xrefOffset = Buffer.byteLength(parts.join(""));
+  const entries = offsets
+    .map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`)
+    .join("");
+  parts.push(
+    `xref\n0 4\n0000000000 65535 f \n${entries}trailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n${String(xrefOffset)}\n%%EOF\n`,
+  );
+  return Buffer.from(parts.join(""));
+}
+
 function createOpenXmlZip(mime: string): Buffer {
   const contentTypes = Buffer.from(
     `<Types><Override ContentType="${mime}.main+xml"/></Types>`,
@@ -118,6 +140,40 @@ function createMinimalJpeg(): Buffer {
   ]);
 }
 
+/** Builds one JPEG segment: FF <marker> <2-byte big-endian length incl. itself> <payload>. */
+function jpegSegment(marker: number, payload: Buffer): Buffer {
+  const header = Buffer.from([0xff, marker, 0, 0]);
+  header.writeUInt16BE(payload.length + 2, 2);
+  return Buffer.concat([header, payload]);
+}
+
+/**
+ * Camera-style JPEG: an EXIF (APP1) segment that embeds a complete thumbnail
+ * JPEG (its own FFD8 ... FFD9), followed by a scan whose entropy-coded data
+ * contains byte stuffing (FF 00) and a restart marker (FF D0), then the real EOI.
+ */
+function createCameraJpeg(): Buffer {
+  const thumbnail = Buffer.concat([createMinimalJpeg(), Buffer.alloc(16, 0x11)]);
+  const exif = jpegSegment(0xe1, Buffer.concat([Buffer.from("Exif\0\0"), thumbnail]));
+  const quantTable = jpegSegment(0xdb, Buffer.alloc(65, 0x01));
+  const startOfScan = jpegSegment(0xda, Buffer.alloc(10, 0x00));
+  const entropyData = Buffer.concat([
+    Buffer.alloc(200, 0x5a),
+    Buffer.from([0xff, 0x00]), // stuffed 0xFF data byte
+    Buffer.alloc(200, 0x3c),
+    Buffer.from([0xff, 0xd0]), // restart marker inside scan data
+    Buffer.alloc(200, 0x7e),
+  ]);
+  return Buffer.concat([
+    Buffer.from([0xff, 0xd8]),
+    exif,
+    quantTable,
+    startOfScan,
+    entropyData,
+    Buffer.from([0xff, 0xd9]),
+  ]);
+}
+
 /** Tiny PNG: signature + empty IHDR-sized header omitted; signature + IEND is enough for our scanner. */
 function createMinimalPng(): Buffer {
   const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -164,6 +220,50 @@ describe("polyglot scanner", () => {
 
     expect(result.threats).toEqual([]);
     expect(result.ok).toBe(true);
+  });
+
+  it("blocks a ZIP whose stored PDF header falls in the first 1024 bytes", async () => {
+    const buffer = createRawZip("document.pdf", createMinimalPdf());
+    const result = await new FileSecurityEngine().scan(buffer, { filename: "documents.zip" });
+
+    expect(result.outcome).toBe("blocked");
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual([]);
+    expect(result.threats).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          scanner: "polyglot",
+          code: "POLYGLOT_DETECTED",
+          severity: "high",
+        }),
+      ]),
+    );
+    const finding = result.threats.find((threat) => threat.code === "POLYGLOT_DETECTED");
+    expect(finding?.meta?.secondary).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ family: "pdf", offset: buffer.indexOf("%PDF-") }),
+      ]),
+    );
+  });
+
+  it("does not flag a ZIP that stores a PDF beyond the first 1024 bytes", async () => {
+    const payload = Buffer.concat([Buffer.alloc(2048, 0x20), createMinimalPdf()]);
+    const buffer = createRawZip("bundle/invoice.pdf", payload);
+    const result = await new FileSecurityEngine().scan(buffer, { filename: "invoices.zip" });
+
+    expect(buffer.indexOf("%PDF-")).toBeGreaterThan(1024);
+    expect(result.threats).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("still flags a PDF header deep inside a non-container file", async () => {
+    const jpeg = createCameraJpeg();
+    const buffer = Buffer.concat([jpeg, Buffer.alloc(2048, 0x20), createMinimalPdf()]);
+    const engine = new FileSecurityEngine({ scanners: ["polyglot"] });
+    const result = await engine.scan(buffer, { filename: "photo.jpg" });
+
+    expect(buffer.indexOf("%PDF-")).toBeGreaterThan(1024);
+    expect(result.threats.map((threat) => threat.code)).toEqual(["POLYGLOT_DETECTED"]);
   });
 
   it.each(ZIP_CONTAINER_CASES)(
@@ -227,6 +327,24 @@ describe("polyglot scanner", () => {
     );
     // medium < default blockThreshold high
     expect(result.ok).toBe(true);
+  });
+
+  it("does not flag a camera JPEG whose EXIF thumbnail has its own end marker", async () => {
+    const engine = new FileSecurityEngine({ scanners: ["polyglot"] });
+    const result = await engine.scan(createCameraJpeg(), { filename: "IMG_0001.jpg" });
+
+    expect(result.detectedMime).toBe("image/jpeg");
+    expect(result.threats).toEqual([]);
+  });
+
+  it("measures trailing content from the real end of a camera JPEG", async () => {
+    const jpeg = createCameraJpeg();
+    const buffer = Buffer.concat([jpeg, Buffer.alloc(64, 0x41)]);
+    const engine = new FileSecurityEngine({ scanners: ["polyglot"] });
+    const result = await engine.scan(buffer, { filename: "IMG_0001.jpg" });
+
+    expect(result.threats.map((threat) => threat.code)).toEqual(["POLYGLOT_TRAILING_CONTENT"]);
+    expect(result.threats[0]?.meta).toMatchObject({ endOffset: jpeg.length, trailingBytes: 64 });
   });
 
   it("ignores tiny trailing padding within tolerance", async () => {

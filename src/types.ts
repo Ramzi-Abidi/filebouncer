@@ -166,7 +166,11 @@ export interface ArchiveConfig {
 }
 
 export interface CsvConfig {
-  /** Cell prefixes that trigger unsafe-cell findings. */
+  /**
+   * Cell prefixes that trigger unsafe-cell findings. When omitted, a
+   * formula-aware default flags `=`, tab and CR always, and `+`, `-`, `@`
+   * only when the cell contains formula syntax and is not number-like.
+   */
   prefixes?: string[];
   /** Stop scanning after N rows (0 = unlimited). */
   maxRows?: number;
